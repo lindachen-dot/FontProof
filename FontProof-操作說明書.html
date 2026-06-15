@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FontProof 操作說明書</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --accent:#6366F1;--accent-light:#EEF2FF;
+  --border:#E4E4E7;--bg:#fff;--bg-panel:#F7F7F8;--bg-panel2:#EFEFEF;
+  --text:#18181B;--text-2:#52525B;--text-3:#A1A1AA;
+  --danger:#EF4444;--danger-light:#FEF2F2;
+  --mono:'JetBrains Mono','Fira Code',monospace;
+  --radius:8px;--radius-lg:12px;
+  --sidebar-w:220px;
+}
+html{scroll-behavior:smooth}
+body{font-family:system-ui,-apple-system,'PingFang TC','Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.7;display:flex;min-height:100vh}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:var(--sidebar-w);flex-shrink:0;
+  background:var(--bg-panel);border-right:1px solid var(--border);
+  position:fixed;top:0;left:0;height:100vh;overflow-y:auto;
+  display:flex;flex-direction:column;
+  padding:0 0 32px;
+}
+.sb-header{padding:24px 20px 16px;border-bottom:1px solid var(--border)}
+.sb-logo{font-family:var(--mono);font-size:16px;font-weight:500;color:var(--accent);letter-spacing:-.3px}
+.sb-sub{font-size:11px;color:var(--text-3);margin-top:3px}
+.sb-nav{padding:12px 10px;flex:1}
+.sb-nav a{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:12px;color:var(--text-2);text-decoration:none;
+  transition:background .1s,color .1s;margin-bottom:2px;
+}
+.sb-nav a:hover{background:var(--bg-panel2);color:var(--text)}
+.sb-nav a.active{background:var(--accent-light);color:var(--accent);font-weight:500}
+.sb-nav .nav-num{
+  width:20px;height:20px;border-radius:50%;
+  background:var(--border);color:var(--text-3);
+  font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:background .1s,color .1s;
+}
+.sb-nav a.active .nav-num{background:var(--accent);color:#fff}
+.sb-print{margin:0 10px;padding:8px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text-2);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .1s}
+.sb-print:hover{background:var(--bg-panel2)}
+.sb-print svg{width:14px;height:14px}
+
+/* ── MAIN CONTENT ── */
+#content{margin-left:var(--sidebar-w);flex:1;max-width:800px;padding:0 48px 80px}
+
+/* ── COVER ── */
+.cover{
+  background:var(--accent);border-radius:0 0 var(--radius-lg) var(--radius-lg);
+  padding:48px 0 40px;margin-bottom:48px;margin-left:-48px;margin-right:-48px;
+  padding-left:48px;padding-right:48px;
+}
+.cover-logo{font-family:var(--mono);font-size:28px;font-weight:500;color:#fff;letter-spacing:-.5px;margin-bottom:6px}
+.cover-title{font-size:18px;color:rgba(255,255,255,.9);font-weight:400;margin-bottom:4px}
+.cover-sub{font-size:13px;color:rgba(255,255,255,.65)}
+.cover-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:20px}
+.cover-tag{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;background:rgba(255,255,255,.15);color:rgba(255,255,255,.9)}
+
+/* ── SECTION ── */
+.section{margin-bottom:56px;scroll-margin-top:24px}
+.section-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid var(--border)}
+.section-num{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--accent);color:#fff;
+  font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.section-title{font-size:20px;font-weight:500;color:var(--text)}
+
+/* ── STEPS ── */
+.step{display:flex;gap:14px;margin-bottom:20px}
+.step-num{
+  width:26px;height:26px;border-radius:50%;
+  background:var(--accent-light);color:var(--accent);
+  font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;
+}
+.step-body{flex:1}
+.step-title{font-size:15px;font-weight:500;margin-bottom:4px}
+.step-desc{font-size:13px;color:var(--text-2);line-height:1.7}
+
+/* ── MOCKUPS ── */
+.mockup{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin:12px 0}
+.mock-bar{background:var(--bg);border-bottom:1px solid var(--border);padding:7px 12px;display:flex;align-items:center;gap:8px}
+.mock-logo{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--accent)}
+.mock-sub{font-size:11px;color:var(--text-3)}
+.mock-toolbar{background:var(--bg-panel);border-bottom:1px solid var(--border);padding:5px 10px;display:flex;gap:3px;align-items:center;flex-wrap:wrap}
+.mbtn{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:10px;color:var(--text-2);background:transparent;border:1px solid transparent;white-space:nowrap}
+.mbtn.act{background:var(--accent-light);color:var(--accent);border-color:#C7D2FE}
+.msep{width:1px;height:14px;background:var(--border);margin:0 3px}
+.mock-body{display:flex}
+.mock-side{width:120px;background:var(--bg-panel);border-right:1px solid var(--border);padding:8px;flex-shrink:0}
+.mock-center{flex:1;padding:12px;background:var(--bg)}
+.mock-right{width:110px;background:var(--bg-panel);border-left:1px solid var(--border);padding:8px;flex-shrink:0}
+.mock-sth{font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.mfi{display:flex;align-items:center;gap:5px;padding:3px 4px;border-radius:4px;margin-bottom:3px}
+.mfi:hover{background:var(--bg-panel2)}
+.mdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.mfn{font-size:9px;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mtog{width:20px;height:11px;border-radius:6px;flex-shrink:0}
+.mgc{display:inline-flex;flex-direction:column;border:1px solid var(--border);border-radius:3px;overflow:hidden;margin:1px;vertical-align:top}
+.mgci{width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.mgcl{font-size:7px;color:var(--text-3);text-align:center;border-top:1px solid var(--border);padding:1px 2px;font-family:var(--mono)}
+.mgc.hl{border-color:var(--danger);background:var(--danger-light)}
+.mdz{border:1.5px dashed var(--border-strong,#D1D1D6);border-radius:6px;padding:10px 8px;text-align:center;font-size:9px;color:var(--text-3);line-height:1.8;margin:4px 0}
+
+/* ── GRID / SXS DEMOS ── */
+.view-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0}
+.view-card{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.view-card-hdr{font-size:11px;font-weight:600;color:var(--text-2);padding:6px 10px;background:var(--bg-panel);border-bottom:1px solid var(--border)}
+.view-card-body{padding:10px;background:var(--bg);font-size:12px;color:var(--text-3)}
+
+/* ── INFO BOXES ── */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.info-box{border:1px solid var(--border);border-radius:var(--radius);padding:12px;background:var(--bg)}
+.info-box-title{font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:8px}
+.info-box ul{list-style:none;padding:0}
+.info-box ul li{font-size:12px;color:var(--text-2);padding:2px 0;display:flex;align-items:baseline;gap:6px}
+.info-box ul li::before{content:'•';color:var(--accent);flex-shrink:0}
+
+/* ── CODE BLOCKS ── */
+.code-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.code-label{font-size:11px;font-weight:500;color:var(--text-2);margin-bottom:5px}
+pre{background:#1E1E2E;color:#CDD6F4;border-radius:var(--radius);padding:12px 14px;font-family:var(--mono);font-size:11px;line-height:1.8;overflow-x:auto}
+.cm{color:#6C7086}
+.cv{color:#A6E3A1}
+.ck{color:#CBA6F7}
+
+/* ── METRICS DEMO ── */
+.metrics-demo{position:relative;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);height:100px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:12px 0}
+.metrics-glyph{font-size:72px;color:var(--accent);opacity:.85;font-family:serif;position:relative;z-index:2}
+.mline{position:absolute;left:0;right:0;height:0;border-top-width:1.5px;border-top-style:solid}
+.metric-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+.ml-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2)}
+.ml-swatch{width:20px;height:2px;flex-shrink:0}
+
+/* ── SLIDER DEMO ── */
+.slider-rows{display:flex;flex-direction:column;gap:6px;margin:12px 0}
+.slider-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px}
+.slider-label{font-size:12px;font-weight:500;width:80px;flex-shrink:0}
+.slider-range{font-size:11px;color:var(--accent);width:76px;flex-shrink:0;font-family:var(--mono)}
+.slider-desc{font-size:12px;color:var(--text-3);flex:1}
+.slider-vis{width:80px;height:4px;background:var(--border);border-radius:2px;flex-shrink:0;position:relative;overflow:visible}
+.slider-fill{height:100%;border-radius:2px;background:var(--accent)}
+.slider-thumb{width:10px;height:10px;border-radius:50%;background:var(--accent);position:absolute;top:-3px}
+
+/* ── TIP BOX ── */
+.tip{background:#FFFBEB;border:1px solid #FDE68A;border-radius:var(--radius);padding:10px 14px;font-size:12px;color:#92400E;margin:10px 0;line-height:1.6}
+.tip strong{font-weight:600}
+
+/* ── FONT FLOW ── */
+.font-flow{display:flex;align-items:center;gap:8px;margin:12px 0;flex-wrap:wrap}
+.flow-arrow{font-size:16px;color:var(--text-3)}
+
+/* ── LOG ITEMS ── */
+.log-demo{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px;margin:10px 0}
+.log-item{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;border-radius:4px;font-family:var(--mono);font-size:12px;border:1px solid var(--border);margin-bottom:4px;background:var(--bg)}
+.log-x{color:var(--text-3);cursor:pointer}
+
+/* ── BADGE ── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-blue{background:var(--accent-light);color:var(--accent)}
+.badge-red{background:var(--danger-light);color:var(--danger)}
+
+/* ── PRINT ── */
+@media print{
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  #sidebar{display:none}
+  #content{margin-left:0;max-width:none;padding:0 32px 40px}
+  .cover{margin-left:-32px;margin-right:-32px;padding-left:32px;padding-right:32px;border-radius:0}
+  .section{page-break-inside:avoid}
+  .section-header{page-break-after:avoid}
+  .step{page-break-inside:avoid}
+  a{color:inherit;text-decoration:none}
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sb-header">
+    <div class="sb-logo">FontProof</div>
+    <div class="sb-sub">操作說明書 v1.0</div>
+  </div>
+  <div class="sb-nav">
+    <a href="#cover"><span class="nav-num">☰</span>封面</a>
+    <a href="#s01"><span class="nav-num">01</span>介面概覽</a>
+    <a href="#s02"><span class="nav-num">02</span>載入字型</a>
+    <a href="#s03"><span class="nav-num">03</span>設定字元集</a>
+    <a href="#s04"><span class="nav-num">04</span>檢視模式</a>
+    <a href="#s05"><span class="nav-num">05</span>Metrics 疊加</a>
+    <a href="#s06"><span class="nav-num">06</span>版面與顯示控制</a>
+    <a href="#s07"><span class="nav-num">07</span>碼位記錄</a>
+    <a href="#s08"><span class="nav-num">08</span>匯出 Codebook PDF</a>
+  </div>
+  <button class="sb-print" onclick="window.print()">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="1" width="10" height="14" rx="1"/><path d="M6 5h4M6 8h4M6 11h2"/></svg>
+    列印 / 儲存 PDF
+  </button>
+</nav>
+
+<!-- CONTENT -->
+<main id="content">
+
+  <!-- COVER -->
+  <div class="cover" id="cover">
+    <div class="cover-logo">FontProof</div>
+    <div class="cover-title">操作說明書</div>
+    <div class="cover-sub">字型檢視與校對工具 · 使用說明 · v1.0 · 2026</div>
+    <div class="cover-tags">
+      <span class="cover-tag">格狀 / 並排 / 疊加</span>
+      <span class="cover-tag">Metrics 疊加</span>
+      <span class="cover-tag">碼位記錄匯出</span>
+      <span class="cover-tag">Codebook PDF</span>
+      <span class="cover-tag">TTF · OTF · TTC</span>
+    </div>
+  </div>
+
+  <!-- 01 介面概覽 -->
+  <section class="section" id="s01">
+    <div class="section-header">
+      <div class="section-num">01</div>
+      <div class="section-title">介面概覽</div>
+    </div>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:14px">介面分為四個主要區域，各司其職：</p>
+    <div class="mockup">
+      <div class="mock-bar">
+        <span class="mock-logo">FontProof</span>
+        <span class="mock-sub">字型檢視與校對工具</span>
+      </div>
+      <div class="mock-toolbar">
+        <div class="mbtn act">格狀</div>
+        <div class="mbtn">並排</div>
+        <div class="mbtn">疊加</div>
+        <div class="msep"></div>
+        <div class="mbtn act">框格</div>
+        <div class="mbtn act">記錄標示</div>
+        <div class="msep"></div>
+        <div class="mbtn">匯出記錄</div>
+        <div class="mbtn">Codebook PDF</div>
+        <div class="mbtn">說明書</div>
+        <div class="msep"></div>
+        <div class="mbtn" style="color:#EF4444">清除全部</div>
+      </div>
+      <div class="mock-body">
+        <div class="mock-side">
+          <div class="mock-sth">字型列表</div>
+          <div class="mfi"><div class="mdot" style="background:#6366F1"></div><div class="mfn">FontA.ttf</div><div class="mtog" style="background:#6366F1"></div></div>
+          <div class="mfi"><div class="mdot" style="background:#EF4444"></div><div class="mfn">FontB.ttf</div><div class="mtog" style="background:#6366F1"></div></div>
+          <div class="mdz">拖曳或點按<br>載入字型<br><span style="font-size:8px">TTF · OTF · TTC</span></div>
+          <div style="margin-top:8px">
+            <div class="mock-sth">字元集</div>
+            <select style="width:100%;font-size:9px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;color:var(--text-2)"><option>選擇字元集</option></select>
+          </div>
+          <div style="margin-top:10px">
+            <div class="mock-sth">Metrics 疊加</div>
+            <div style="font-size:9px;color:var(--text-2);line-height:2.1">☑ Baseline<br>☐ hhea Ascent<br>☐ Typo Ascender<br>☐ x-height</div>
+          </div>
+        </div>
+        <div class="mock-center">
+          <div style="font-size:9px;color:var(--text-3);margin-bottom:6px;display:flex;align-items:center;gap:4px">
+            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#6366F1"></span>FontA.ttf
+          </div>
+          <div>
+            <div class="mgc"><div class="mgci" style="color:#6366F1">A</div><div class="mgcl">uni0041</div></div>
+            <div class="mgc"><div class="mgci" style="color:#6366F1">B</div><div class="mgcl">uni0042</div></div>
+            <div class="mgc hl"><div class="mgci" style="color:#6366F1">C</div><div class="mgcl">uni0043</div></div>
+            <div class="mgc"><div class="mgci" style="color:#6366F1">D</div><div class="mgcl">uni0044</div></div>
+            <div class="mgc"><div class="mgci" style="color:#6366F1">E</div><div class="mgcl">uni0045</div></div>
+          </div>
+        </div>
+        <div class="mock-right">
+          <div style="font-size:9px;font-weight:600;color:var(--text-3);margin-bottom:8px">版面設定</div>
+          <div style="font-size:9px;color:var(--text-2);margin-bottom:2px">字型大小</div>
+          <div style="height:3px;background:var(--border);border-radius:2px;margin-bottom:8px"><div style="width:60%;height:100%;background:var(--accent);border-radius:2px"></div></div>
+          <div style="font-size:9px;color:var(--text-2);margin-bottom:2px">字元間距</div>
+          <div style="height:3px;background:var(--border);border-radius:2px;margin-bottom:10px"><div style="width:20%;height:100%;background:var(--accent);border-radius:2px"></div></div>
+          <div style="font-size:9px;font-weight:600;color:var(--accent);padding-top:8px;border-top:1px solid var(--border)">顏色</div>
+          <div style="font-size:9px;font-weight:600;color:var(--text-3);margin-top:10px">碼位記錄</div>
+        </div>
+      </div>
+    </div>
+    <div class="info-grid" style="margin-top:14px">
+      <div class="info-box">
+        <div class="info-box-title">左側欄</div>
+        <ul><li>字型列表與載入區</li><li>字元集下拉選單</li><li>Metrics 疊加開關</li></ul>
+      </div>
+      <div class="info-box">
+        <div class="info-box-title">工具列</div>
+        <ul><li>格狀 / 並排 / 疊加切換</li><li>框格 · 記錄標示切換</li><li>匯出記錄 · Codebook PDF · 說明書</li><li>清除全部（移除所有字型與記錄）</li></ul>
+      </div>
+      <div class="info-box">
+        <div class="info-box-title">中央檢視區</div>
+        <ul><li>字符格狀 / 並排 / 疊加顯示</li><li>雙擊字符加入碼位記錄</li></ul>
+      </div>
+      <div class="info-box">
+        <div class="info-box-title">右側面板</div>
+        <ul><li>版面設定（大小、間距、行距）</li><li>字型顏色設定</li><li>碼位記錄列表</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 載入字型 -->
+  <section class="section" id="s02">
+    <div class="section-header">
+      <div class="section-num">02</div>
+      <div class="section-title">載入字型</div>
+    </div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">拖曳字型檔案</div>
+        <div class="step-desc">將 TTF、OTF 或 TTC 檔案拖曳到左側欄虛線框，或點按框框開啟檔案選擇器。支援一次載入多個檔案。</div>
+        <div style="margin:10px 0;border:1.5px dashed var(--accent);border-radius:8px;padding:14px;text-align:center;background:var(--accent-light);font-size:12px;color:var(--accent)">
+          ↑ 拖曳或點按載入字型 &nbsp;·&nbsp; TTF &nbsp;·&nbsp; OTF &nbsp;·&nbsp; TTC
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">TTC 自動展開</div>
+        <div class="step-desc">TTC 檔案內含多個子字型，載入後會自動全部展開顯示於列表中，每個子字型可個別開啟或關閉。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">啟用 / 停用 / 移除字型</div>
+        <div class="step-desc">點按右側圓形切換鍵可暫時停用字型；滑鼠移到字型名稱時出現 × 可永久移除。</div>
+        <div class="mockup" style="margin-top:10px">
+          <div style="padding:8px 10px;background:#fff">
+            <div class="mfi" style="background:var(--bg-panel)">
+              <div class="mdot" style="background:#6366F1"></div>
+              <div class="mfn" style="font-size:11px">HFFont-Regular.ttf</div>
+              <div class="mtog" style="background:#6366F1"></div>
+              <span style="font-size:13px;color:var(--text-3);margin-left:4px">×</span>
+            </div>
+            <div class="mfi">
+              <div class="mdot" style="background:#EF4444;opacity:.35"></div>
+              <div class="mfn" style="font-size:11px;opacity:.4">HFFont-Bold.ttf（已停用）</div>
+              <div class="mtog" style="background:#D1D1D6"></div>
+            </div>
+          </div>
+        </div>
+        <div class="tip"><strong>提示：</strong>停用的字型（切換鍵呈灰色）不顯示於檢視區，但顏色和記錄設定仍保留。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 字元集 -->
+  <section class="section" id="s03">
+    <div class="section-header">
+      <div class="section-num">03</div>
+      <div class="section-title">設定字元集</div>
+    </div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">從左側欄下拉選單選擇字元集</div>
+        <div class="step-desc">開啟工具後預設顯示「選擇字元集」，不自動載入任何字元集。從左側欄的下拉選單選擇後立即套用；選擇「Unicode 範圍」或「載入 Encoding 檔案」時會開啟輸入視窗，可再次點選同一選項重新開啟。</div>
+      </div>
+    </div>
+    <div class="info-grid">
+      <div class="info-box">
+        <div class="info-box-title">預設字元集</div>
+        <ul>
+          <li>ASCII（U+0020–U+007E）</li>
+          <li>MS Windows 1252 Western</li>
+          <li>MS Windows 1250 Central European</li>
+          <li>MS Windows 1251 Cyrillic</li>
+          <li>MS Windows 1253 Greek</li>
+          <li>MS Windows 1254–1258（其他）</li>
+          <li>MS Windows 874 Thai (OEM)</li>
+        </ul>
+      </div>
+      <div class="info-box">
+        <div class="info-box-title">自訂字元集</div>
+        <ul>
+          <li>Unicode 自訂範圍（如 U+4E00–U+9FFF）</li>
+          <li>載入 FontLab Encoding（.enc）</li>
+          <li>載入純文字字串（.txt）</li>
+        </ul>
+      </div>
+    </div>
+    <div class="step" style="margin-top:16px">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">載入 Encoding 檔案格式說明</div>
+        <div class="step-desc">支援兩種格式，工具自動偵測：</div>
+        <div class="code-grid" style="margin-top:10px">
+          <div>
+            <div class="code-label">格式 A（.enc）— FontLab Encoding</div>
+            <pre><span class="cm">%%FONTLAB ENCODING: -1; 2026-06-12</span>
+<span class="cm">%%GROUP:FontProof</span>
+<span class="cv">uni0041</span>
+<span class="cv">uni0042</span>
+<span class="cv">uni0043</span></pre>
+          </div>
+          <div>
+            <div class="code-label">格式 B（.txt）— 純文字字串</div>
+            <pre><span class="cv">ABCDEFGHIJKLMNOPQRSTUVWXYZ
+abcdefghijklmnopqrstuvwxyz
+0123456789</span></pre>
+          </div>
+        </div>
+        <div class="tip"><strong>提示：</strong>%% 開頭的注解行會自動略過。再次點選同一選項可重新開啟輸入視窗修改設定。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 檢視模式 -->
+  <section class="section" id="s04">
+    <div class="section-header">
+      <div class="section-num">04</div>
+      <div class="section-title">三種檢視模式</div>
+    </div>
+    <div class="view-grid">
+      <div class="view-card">
+        <div class="view-card-hdr">格狀</div>
+        <div class="view-card-body">
+          <div style="font-size:9px;margin-bottom:4px;display:flex;align-items:center;gap:3px;color:var(--text-3)"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#6366F1"></span>FontA</div>
+          <div>
+            <div class="mgc"><div class="mgci" style="color:#6366F1;font-size:14px">A</div><div class="mgcl">0041</div></div>
+            <div class="mgc"><div class="mgci" style="color:#6366F1;font-size:14px">B</div><div class="mgcl">0042</div></div>
+            <div class="mgc"><div class="mgci" style="color:#6366F1;font-size:14px">C</div><div class="mgcl">0043</div></div>
+          </div>
+          <div style="height:6px"></div>
+          <div style="font-size:9px;margin-bottom:4px;display:flex;align-items:center;gap:3px;color:var(--text-3)"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#EF4444"></span>FontB</div>
+          <div>
+            <div class="mgc"><div class="mgci" style="color:#EF4444;font-size:14px">A</div><div class="mgcl">0041</div></div>
+            <div class="mgc"><div class="mgci" style="color:#EF4444;font-size:14px">B</div><div class="mgcl">0042</div></div>
+            <div class="mgc"><div class="mgci" style="color:#EF4444;font-size:14px">C</div><div class="mgcl">0043</div></div>
+          </div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:8px">每套字型獨立一區，由上至下堆疊</div>
+        </div>
+      </div>
+      <div class="view-card">
+        <div class="view-card-hdr">並排</div>
+        <div class="view-card-body">
+          <div style="display:flex;gap:4px;margin-bottom:4px">
+            <div style="display:flex;gap:1px">
+              <div class="mgc"><div class="mgci" style="color:#6366F1;font-size:14px">A</div><div class="mgcl">0041</div></div>
+              <div class="mgc"><div class="mgci" style="color:#EF4444;font-size:14px">A</div><div class="mgcl">0041</div></div>
+            </div>
+            <div style="display:flex;gap:1px">
+              <div class="mgc"><div class="mgci" style="color:#6366F1;font-size:14px">B</div><div class="mgcl">0042</div></div>
+              <div class="mgc"><div class="mgci" style="color:#EF4444;font-size:14px">B</div><div class="mgcl">0042</div></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px">
+            <div style="display:flex;gap:1px">
+              <div class="mgc"><div class="mgci" style="color:#6366F1;font-size:14px">C</div><div class="mgcl">0043</div></div>
+              <div class="mgc"><div class="mgci" style="color:#EF4444;font-size:14px">C</div><div class="mgcl">0043</div></div>
+            </div>
+            <div style="display:flex;gap:1px">
+              <div class="mgc"><div class="mgci" style="color:#6366F1;font-size:14px">D</div><div class="mgcl">0044</div></div>
+              <div class="mgc"><div class="mgci" style="color:#EF4444;font-size:14px">D</div><div class="mgcl">0044</div></div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:8px">同字符各字型緊鄰排列</div>
+        </div>
+      </div>
+      <div class="view-card">
+        <div class="view-card-hdr">疊加</div>
+        <div class="view-card-body">
+          <div style="font-size:9px;margin-bottom:4px;display:flex;gap:8px">
+            <span style="color:#6366F1">● FontA</span>
+            <span style="color:#EF4444">● FontB</span>
+          </div>
+          <div>
+            <div class="mgc">
+              <div class="mgci" style="position:relative;font-size:16px">
+                <span style="position:absolute;color:#6366F1;opacity:.6">A</span>
+                <span style="color:#EF4444;opacity:.6;position:relative;left:2px">A</span>
+              </div>
+              <div class="mgcl">0041</div>
+            </div>
+            <div class="mgc">
+              <div class="mgci" style="position:relative;font-size:16px">
+                <span style="position:absolute;color:#6366F1;opacity:.6">B</span>
+                <span style="color:#EF4444;opacity:.6;position:relative;left:2px">B</span>
+              </div>
+              <div class="mgcl">0042</div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:8px">Multiply 混色，重疊處加深</div>
+        </div>
+      </div>
+    </div>
+    <div class="tip"><strong>疊加透明度：</strong>在右側面板「顏色」頁籤可調整疊加透明度，預設 50%。</div>
+  </section>
+
+  <!-- 05 Metrics -->
+  <section class="section" id="s05">
+    <div class="section-header">
+      <div class="section-num">05</div>
+      <div class="section-title">Metrics 疊加</div>
+    </div>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:12px">左側欄「Metrics 疊加」區塊，各條線可獨立勾選。點「全開」一次啟用全部，再按變「全關」。</p>
+    <div class="metrics-demo">
+      <span class="metrics-glyph">H</span>
+      <div class="mline" style="top:18%;border-top-color:#8B5CF6;border-top-style:dashed;opacity:.85"></div>
+      <div class="mline" style="top:30%;border-top-color:#EF4444;border-top-style:dashed;opacity:.8"></div>
+      <div class="mline" style="top:52%;border-top-color:#F59E0B;border-top-style:dashed;opacity:.8"></div>
+      <div class="mline" style="top:68%;border-top-color:#3B82F6;border-top-style:solid;border-top-width:1.5px;opacity:.5"></div>
+      <div class="mline" style="top:82%;border-top-color:#10B981;border-top-style:dashed;opacity:.8"></div>
+    </div>
+    <div class="metric-legend">
+      <div class="ml-item"><div class="ml-swatch" style="height:2px;background:#3B82F6;-webkit-print-color-adjust:exact;print-color-adjust:exact"></div>Baseline</div>
+      <div class="ml-item"><div class="ml-swatch" style="height:0;border-top:2px dashed #8B5CF6"></div>hhea Ascent</div>
+      <div class="ml-item"><div class="ml-swatch" style="height:0;border-top:2px dashed #8B5CF6"></div>hhea Descent</div>
+      <div class="ml-item"><div class="ml-swatch" style="height:0;border-top:2px dashed #10B981"></div>Typo Ascender</div>
+      <div class="ml-item"><div class="ml-swatch" style="height:0;border-top:2px dashed #10B981"></div>Typo Descender</div>
+      <div class="ml-item"><div class="ml-swatch" style="height:0;border-top:2px dashed #F59E0B"></div>x-height</div>
+      <div class="ml-item"><div class="ml-swatch" style="height:0;border-top:2px dashed #EF4444"></div>Cap Height</div>
+    </div>
+    <div class="tip" style="margin-top:12px"><strong>注意：</strong>載入多套字型時，所有字型共用統一的 Baseline 位置（取所有字型 hhea 最大值），確保 Metrics 線不超出格子範圍。</div>
+  </section>
+
+  <!-- 06 版面控制 -->
+  <section class="section" id="s06">
+    <div class="section-header">
+      <div class="section-num">06</div>
+      <div class="section-title">版面與顯示控制</div>
+    </div>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:12px">右側面板「版面設定」頁籤，所有設定均即時套用：</p>
+    <div class="slider-rows">
+      <div class="slider-row">
+        <span class="slider-label">字型大小</span>
+        <span class="slider-range">24–200 px</span>
+        <span class="slider-desc">調整字符顯示尺寸</span>
+        <div class="slider-vis"><div class="slider-fill" style="width:60%"></div><div class="slider-thumb" style="left:calc(60% - 5px)"></div></div>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">字元間距</span>
+        <span class="slider-range">0–40 px</span>
+        <span class="slider-desc">字符格子之間的水平間距</span>
+        <div class="slider-vis"><div class="slider-fill" style="width:20%"></div><div class="slider-thumb" style="left:calc(20% - 5px)"></div></div>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">行距</span>
+        <span class="slider-range">0–80 px</span>
+        <span class="slider-desc">每行之間的垂直間距</span>
+        <div class="slider-vis"><div class="slider-fill" style="width:15%"></div><div class="slider-thumb" style="left:calc(15% - 5px)"></div></div>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">每行字元數</span>
+        <span class="slider-range">4–40</span>
+        <span class="slider-desc">格狀模式每行排幾個字符</span>
+        <div class="slider-vis"><div class="slider-fill" style="width:40%"></div><div class="slider-thumb" style="left:calc(40% - 5px)"></div></div>
+      </div>
+    </div>
+    <p style="font-size:13px;font-weight:500;margin:18px 0 10px">工具列快速切換</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px">
+        <span class="badge badge-blue">框格</span>
+        <span style="font-size:13px;color:var(--text-2)">顯示 / 隱藏字符格子的邊框。PDF 匯出會跟隨此設定。</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px">
+        <span class="badge badge-blue">記錄標示</span>
+        <span style="font-size:13px;color:var(--text-2)">開啟時，已記錄字符顯示紅框；關閉時紅框消失，記錄仍保留。</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px">
+        <span class="badge badge-red">清除全部</span>
+        <span style="font-size:13px;color:var(--text-2)">移除所有已載入的字型並清除碼位記錄。操作前會出現確認提示，無法復原。</span>
+      </div>
+    </div>
+    <p style="font-size:13px;font-weight:500;margin:18px 0 10px">顏色設定</p>
+    <p style="font-size:13px;color:var(--text-2)">右側面板「顏色」頁籤 → 點按色塊開啟顏色選擇器，可從 12 個預設色直接點選，或輸入 #RRGGBB 自訂顏色。疊加模式的透明度預設 50%，可用滑桿調整。</p>
+    <p style="font-size:13px;font-weight:500;margin:18px 0 10px">🔍 Go To 跳轉欄位</p>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:8px">工具列右側的搜尋欄，輸入碼位後跳轉到對應字符並以橘黃色邊框高亮標示。</p>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px">
+        <code style="font-family:var(--mono);font-size:12px;background:var(--bg-panel);padding:2px 7px;border-radius:4px">A</code>
+        <span style="font-size:13px;color:var(--text-2)">直接輸入字元</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px">
+        <code style="font-family:var(--mono);font-size:12px;background:var(--bg-panel);padding:2px 7px;border-radius:4px">0041</code>
+        <span style="font-size:13px;color:var(--text-2)">十六進制碼位</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px">
+        <code style="font-family:var(--mono);font-size:12px;background:var(--bg-panel);padding:2px 7px;border-radius:4px">uni0041</code>
+        <span style="font-size:13px;color:var(--text-2)">FontLab 格式</span>
+      </div>
+    </div>
+    <div class="tip" style="margin-top:8px">字符不在目前字元集中時顯示「未收錄」。按 Enter 或直接輸入即可跳轉。</div>
+  </section>
+
+  <!-- 07 碼位記錄 -->
+  <section class="section" id="s07">
+    <div class="section-header">
+      <div class="section-num">07</div>
+      <div class="section-title">碼位記錄</div>
+    </div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">雙擊字符格子加入記錄</div>
+        <div class="step-desc">雙擊任一格子，該字符以 uniXXXX 格式加入記錄，同一字符不重複記錄。若「記錄標示」開啟，格子顯示紅色邊框。</div>
+        <div class="font-flow" style="margin-top:10px">
+          <div class="mgc"><div class="mgci" style="color:#6366F1">A</div><div class="mgcl">uni0041</div></div>
+          <span class="flow-arrow">雙擊 →</span>
+          <div class="mgc hl"><div class="mgci" style="color:#6366F1">A</div><div class="mgcl">uni0041</div></div>
+          <span class="flow-arrow">→</span>
+          <div class="log-item" style="margin:0;min-width:100px">uni0041 <span class="log-x">×</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">右鍵單擊字符格子移除記錄</div>
+        <div class="step-desc">對已在記錄中的字符按右鍵，立即從碼位記錄中移除並取消紅框標示。對未記錄的字符右鍵則不做任何事。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">管理記錄清單 &amp; 搜尋</div>
+        <div class="step-desc">右側面板「碼位記錄」頁籤，頂部有搜尋欄可即時過濾清單。點 × 移除單筆；「清除」清空全部。每筆記錄左側顯示字符預覽。</div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px;margin-top:8px">
+          <div style="border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:var(--mono);font-size:12px;color:var(--text-3);margin-bottom:6px">🔍 搜尋 A · uni0041 · 0041</div>
+          <div class="log-item"><span style="display:flex;align-items:center;gap:7px"><span style="font-size:14px">A</span><span>uni0041</span></span><span class="log-x">×</span></div>
+          <div class="log-item"><span style="display:flex;align-items:center;gap:7px"><span style="font-size:14px">K</span><span>uni004B</span></span><span class="log-x">×</span></div>
+          <div class="log-item"><span style="display:flex;align-items:center;gap:7px"><span style="font-size:14px">P</span><span>uni0050</span></span><span class="log-x">×</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">匯出記錄（同時產出兩個檔案）</div>
+        <div class="code-grid" style="margin-top:10px">
+          <div>
+            <div class="code-label">格式 A — font-qa-issues.enc</div>
+            <pre><span class="cm">%%FONTLAB ENCODING: -1; 2026-06-12</span>
+<span class="cm">%%GROUP:FontQA</span>
+<span class="cv">uni0041</span>
+<span class="cv">uni004B</span>
+<span class="cv">uni0050</span></pre>
+          </div>
+          <div>
+            <div class="code-label">格式 B — font-qa-issues.txt</div>
+            <pre><span class="cv">AKP</span></pre>
+          </div>
+        </div>
+        <div class="tip"><strong>.enc</strong> 供 FontLab 直接開啟；<strong>.txt</strong> 純文字字串可直接貼入其他工具。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 PDF -->
+  <section class="section" id="s08">
+    <div class="section-header">
+      <div class="section-num">08</div>
+      <div class="section-title">匯出 Codebook PDF</div>
+    </div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">點按工具列「Codebook PDF」</div>
+        <div class="step-desc">開啟匯出設定視窗，確認目前字元集、字型大小及框格顯示狀態。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">選擇版面配置</div>
+        <div class="info-grid" style="margin-top:8px">
+          <div class="info-box">
+            <div class="info-box-title">格狀版面</div>
+            <ul><li>適合單一字型</li><li>字符由左到右、上至下排列</li><li>適合輸出完整字元集樣本冊</li></ul>
+          </div>
+          <div class="info-box">
+            <div class="info-box-title">並排版面</div>
+            <ul><li>適合多字型比對</li><li>同字符各套版本並列顯示</li><li>適合版本比對或字型審核</li></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">點按「產生 PDF」</div>
+        <div class="step-desc">PDF 以 4× 高解析度 Canvas 渲染，字符清晰不模糊。</div>
+        <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-top:10px">
+          <div style="font-size:11px;font-weight:600;color:var(--text-3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">PDF 包含內容</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+            <div style="font-size:12px;color:var(--text-2);display:flex;gap:6px"><span style="color:var(--accent)">✓</span>字符圖形（高解析度）</div>
+            <div style="font-size:12px;color:var(--text-2);display:flex;gap:6px"><span style="color:var(--accent)">✓</span>Unicode 碼（uniXXXX）</div>
+            <div style="font-size:12px;color:var(--text-2);display:flex;gap:6px"><span style="color:var(--accent)">✓</span>字型名稱</div>
+            <div style="font-size:12px;color:var(--text-2);display:flex;gap:6px"><span style="color:var(--accent)">✓</span>字元集與字型大小資訊</div>
+          </div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">框格顯示跟隨介面目前的「框格」開關設定（開框格 → PDF 有框；關框格 → PDF 無框）</div>
+        </div>
+        <div class="tip" style="margin-top:10px"><strong>建議：</strong>匯出前先在介面調好字型大小與框格設定，PDF 會完整反映當前顯示狀態。</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// Active nav highlight on scroll
+const sections = document.querySelectorAll('section.section, #cover');
+const navLinks = document.querySelectorAll('#sidebar .sb-nav a');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      navLinks.forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+      });
+    }
+  });
+}, { threshold: 0.25, rootMargin: '-10% 0px -60% 0px' });
+
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

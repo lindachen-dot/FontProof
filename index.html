@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FontProof</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--bg-panel:#F7F7F8;--bg-panel2:#EFEFEF;
+  --border:#E4E4E7;--border-strong:#D1D1D6;
+  --text:#18181B;--text-2:#52525B;--text-3:#A1A1AA;
+  --accent:#6366F1;--accent-light:#EEF2FF;--accent-hover:#4F46E5;
+  --danger:#EF4444;--danger-light:#FEF2F2;
+  --radius:6px;--radius-lg:10px;
+  --shadow-lg:0 4px 16px rgba(0,0,0,.12);
+  --mono:'JetBrains Mono',monospace;
+  --sw:260px;--pw:280px;
+}
+body{font-family:system-ui,-apple-system,'PingFang TC','Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);font-size:13px;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+/* TITLEBAR */
+#titlebar{height:44px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;user-select:none}
+.logo{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--accent)}
+.tsep{width:1px;height:20px;background:var(--border)}
+
+/* TOOLBAR */
+#toolbar{height:40px;background:var(--bg-panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 10px;gap:3px;flex-shrink:0;overflow:visible}
+.tg{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.tsep2{width:1px;height:22px;background:var(--border);margin:0 5px;flex-shrink:0}
+.spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:var(--radius);border:1px solid transparent;cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap;transition:background .1s,color .1s;background:transparent;color:var(--text-2)}
+.btn:hover{background:var(--border);color:var(--text)}
+.btn.active{background:var(--accent-light);color:var(--accent);border-color:#C7D2FE}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent-hover);color:#fff}
+.btn-danger{color:var(--danger)}
+.btn-danger:hover{background:var(--danger-light)}
+.btn svg{width:14px;height:14px;flex-shrink:0}
+.btn-icon{padding:5px 6px}
+
+/* LAYOUT */
+#main{display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+#sidebar{width:var(--sw);background:var(--bg-panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-x:visible;overflow-y:auto;flex-shrink:0}
+.ss{display:flex;flex-direction:column;overflow:hidden}
+.sh{display:flex;align-items:center;justify-content:space-between;padding:7px 10px 6px;border-bottom:1px solid var(--border);flex-shrink:0}
+.st{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em}
+.sb{overflow-y:auto;padding:5px;flex:1}
+
+/* FONT ITEMS */
+.fi{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:var(--radius);transition:background .1s}
+.fi:hover{background:var(--bg-panel2)}
+.fdot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1px solid rgba(0,0,0,.12)}
+.finfo{flex:1;min-width:0}
+.fname{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ftog{width:28px;height:16px;border-radius:8px;border:none;cursor:pointer;position:relative;transition:background .15s;flex-shrink:0;background:var(--border-strong)}
+.ftog.on{background:var(--accent)}
+.ftog::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.ftog.on::after{left:14px}
+.frem{opacity:0;padding:2px 4px;border-radius:3px;border:none;background:none;cursor:pointer;color:var(--text-3);font-size:12px}
+.fi:hover .frem{opacity:1}
+.frem:hover{color:var(--danger);background:var(--danger-light)}
+
+/* DROP ZONE */
+#dz{margin:7px;border:1.5px dashed var(--border-strong);border-radius:var(--radius-lg);padding:13px 8px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;color:var(--text-3);font-size:11px;line-height:1.7}
+#dz:hover,#dz.over{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
+#dz svg{width:20px;height:20px;margin-bottom:3px;opacity:.45}
+
+/* METRICS */
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:5px}
+.mt{display:flex;align-items:center;gap:5px;padding:4px 7px;border-radius:var(--radius);cursor:pointer;user-select:none;transition:background .1s}
+.mt:hover{background:var(--bg-panel2)}
+.mdot{width:12px;height:3px;border-radius:2px;flex-shrink:0}
+.mlabel{font-size:11px;color:var(--text-2)}
+.mcb{width:13px;height:13px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+
+/* CANVAS AREA */
+#canvas-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#canvas-scroll{flex:1;overflow:auto;padding:16px}
+
+/* GLYPH CELLS */
+.gc{position:relative;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color .12s,box-shadow .12s;background:var(--bg);flex-shrink:0;display:inline-flex;flex-direction:column}
+.gc:hover{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-light)}
+.gc.goto-hl{border-color:#F59E0B!important;box-shadow:0 0 0 2px #FEF3C7!important;background:#FFFBEB}
+/* in-log highlight — only shown when showLogHighlight is true */
+.gc.in-log.hl-on{border-color:var(--danger)!important;background:var(--danger-light)}
+.gc canvas{display:block;flex-shrink:0}
+.glabel{font-family:var(--mono);font-size:9px;color:var(--text-3);text-align:center;padding:2px 2px 3px;background:var(--bg);border-top:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* GRID — explicit width so columns don't stretch */
+.glyph-grid{display:flex;flex-wrap:wrap}
+
+/* SIDE-BY-SIDE — row-based layout */
+.sxs-table{display:flex;flex-direction:column;gap:0}
+.sxs-header-row{display:flex;border-bottom:2px solid var(--border);background:var(--bg-panel);position:sticky;top:-16px;z-index:10}
+.sxs-header-cell{flex:1;padding:5px 10px;font-size:11px;font-weight:600;color:var(--text-2);display:flex;align-items:center;gap:6px;border-right:1px solid var(--border);min-width:0}
+.sxs-header-cell:last-child{border-right:none}
+.sxs-glyph-row{display:flex;border-bottom:1px solid var(--border)}
+.sxs-glyph-row:last-child{border-bottom:none}
+/* Each font column: flex row, wrapping glyph cells horizontally */
+.sxs-cell{flex:1;display:flex;flex-direction:row;flex-wrap:wrap;padding:6px;border-right:1px solid var(--border);align-content:flex-start;min-width:0}
+.sxs-cell:last-child{border-right:none}
+
+/* RIGHT PANEL */
+#rp{width:var(--pw);background:var(--bg-panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.ptabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.ptab{flex:1;padding:9px 4px;text-align:center;font-size:12px;cursor:pointer;color:var(--text-3);border-bottom:2px solid transparent;transition:color .1s,border-color .1s}
+.ptab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500}
+.ptbody{flex:1;overflow-y:auto;display:none;flex-direction:column}
+.ptbody.active{display:flex}
+
+/* CONTROLS */
+.cg{padding:9px 12px;border-bottom:1px solid var(--border)}
+.cl{font-size:11px;color:var(--text-3);margin-bottom:4px;font-weight:500}
+.cr{display:flex;align-items:center;gap:7px}
+.cslider{flex:1;accent-color:var(--accent);cursor:pointer}
+.cval{width:46px;text-align:right}
+.cval input{width:100%;border:1px solid var(--border);border-radius:4px;padding:3px 5px;font-family:var(--mono);font-size:11px;text-align:right;background:var(--bg);color:var(--text);outline:none}
+.cval input:focus{border-color:var(--accent)}
+
+/* COLOR LIST */
+.color-row{display:flex;align-items:center;gap:8px;padding:6px 10px;transition:background .1s;border-radius:var(--radius)}
+.color-row:hover{background:var(--bg-panel2)}
+.cswatch{width:20px;height:20px;border-radius:4px;border:1.5px solid rgba(0,0,0,.15);flex-shrink:0;cursor:pointer}
+.cname{font-size:12px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chex{font-family:var(--mono);font-size:10px;color:var(--text-3)}
+
+/* COLOR POPOVER */
+#cpop{position:fixed;z-index:9000;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px;box-shadow:var(--shadow-lg);display:none;flex-direction:column;gap:8px;width:204px}
+#cpop.show{display:flex}
+.cpre{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:2px}
+.cpsw{width:22px;height:22px;border-radius:4px;border:1.5px solid rgba(0,0,0,.12);cursor:pointer;transition:transform .1s}
+.cpsw:hover{transform:scale(1.15)}
+.cp-row{display:flex;gap:5px;align-items:center}
+.cp-row input[type=color]{width:32px;height:28px;border:1px solid var(--border);border-radius:4px;padding:1px;cursor:pointer;flex-shrink:0}
+.cp-row input[type=text]{flex:1;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-family:var(--mono);font-size:11px;background:var(--bg);color:var(--text);outline:none}
+.cp-row input[type=text]:focus{border-color:var(--accent)}
+
+/* LOG */
+.log-list{flex:1;overflow-y:auto;padding:6px}
+.log-item{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;border-radius:var(--radius);font-family:var(--mono);font-size:12px;border:1px solid var(--border);margin-bottom:3px;background:var(--bg)}
+.log-item:hover{border-color:var(--accent)}
+.log-rem{border:none;background:none;cursor:pointer;color:var(--text-3);font-size:13px;padding:0 2px;border-radius:3px}
+.log-rem:hover{color:var(--danger);background:var(--danger-light)}
+.log-acts{padding:9px 11px;display:flex;gap:6px;border-top:1px solid var(--border);flex-shrink:0}
+.log-empty{text-align:center;color:var(--text-3);font-size:12px;padding:24px 14px;line-height:1.9}
+
+/* STATUS */
+#sb{height:24px;background:var(--bg-panel);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:12px;font-size:11px;color:var(--text-3);font-family:var(--mono);flex-shrink:0}
+.sbsep{width:1px;height:12px;background:var(--border)}
+
+/* MODAL */
+.moverlay{position:fixed;inset:0;background:rgba(0,0,0,.28);display:none;align-items:center;justify-content:center;z-index:1000}
+.moverlay.show{display:flex}
+.modal{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px;min-width:360px;max-width:500px;box-shadow:var(--shadow-lg)}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:14px}
+.modal label{font-size:12px;color:var(--text-2);margin-bottom:4px;display:block;margin-top:10px}
+.msel,.minput{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);outline:none;margin-bottom:2px}
+.msel:focus,.minput:focus{border-color:var(--accent)}
+.minput{font-family:var(--mono);font-size:12px}
+.hint{font-size:10px;color:var(--text-3);margin-bottom:6px}
+.mbtns{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+
+/* EMPTY STATE */
+#es{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:400px;color:var(--text-3);gap:12px;text-align:center}
+
+/* TOAST */
+#toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1C1C1E;color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9999;white-space:nowrap}
+#toast.show{opacity:1}
+
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+
+/* TOOLTIP — JS-based, single floating element */
+#fp-tip{
+  position:fixed;display:none;
+  background:#1C1C1E;color:#fff;
+  font-size:11px;font-family:system-ui,-apple-system,'PingFang TC',sans-serif;
+  white-space:pre;padding:6px 10px;border-radius:7px;
+  pointer-events:none;z-index:8000;line-height:1.6;
+  box-shadow:0 3px 10px rgba(0,0,0,.2);
+  max-width:280px;
+}
+/* TOOLTIP */
+#tip-box{
+  position:fixed;z-index:9999;
+  background:#1C1C1E;color:#fff;
+  font-size:11px;font-family:system-ui,-apple-system,'PingFang TC',sans-serif;
+  padding:5px 10px;border-radius:6px;
+  box-shadow:0 2px 8px rgba(0,0,0,.22);
+  pointer-events:none;white-space:nowrap;
+  opacity:0;transition:opacity .15s;
+  line-height:1.6;
+}
+#tip-box.show{opacity:1}
+#tip-box::before{
+  content:'';position:absolute;top:-5px;left:50%;transform:translateX(-50%);
+  border:5px solid transparent;border-bottom-color:#1C1C1E;border-top:none;
+}
+
+</style>
+</head>
+<body>
+
+<!-- TITLEBAR -->
+<div id="titlebar">
+  <span class="logo">FontProof</span>
+  <div class="tsep"></div>
+  <span style="font-size:13px;color:var(--text-2)">字型檢視與校對工具</span>
+  <div class="spacer"></div>
+</div>
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <div class="tg">
+    <button class="btn active" id="btn-grid" onclick="setView('grid')" data-tip="格狀檢視
+每套字型各自獨立顯示" >
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>格狀
+    </button>
+    <button class="btn" id="btn-sxs" onclick="setView('sxs')" data-tip="並排比對
+同字符各字型緊鄰排列" >
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="6" height="12" rx="1"/><rect x="9" y="2" width="6" height="12" rx="1"/></svg>並排
+    </button>
+    <button class="btn" id="btn-overlay" onclick="setView('overlay')" data-tip="疊加比對
+多字型重疊，Multiply 混色" >
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="8" r="5"/><circle cx="10" cy="8" r="5"/></svg>疊加
+    </button>
+  </div>
+  <div class="tsep2"></div>
+  <!-- 字元集按鈕已移至左側欄位下方下拉選單 -->
+  <div class="tsep2"></div>
+  <!-- BORDER TOGGLE -->
+  <button class="btn active" id="btn-border" onclick="toggleBorder()" data-tip="框格顯示開關
+PDF 匯出同步此設定" >
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/></svg>框格
+  </button>
+  <!-- LOG HIGHLIGHT TOGGLE -->
+  <button class="btn active" id="btn-hl" onclick="toggleLogHL()" data-tip="碼位記錄標示
+已記錄字符顯示紅框" >
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 8h6M8 5v6"/></svg>記錄標示
+  </button>
+  <div class="tsep2"></div>
+  <button class="btn" data-tip="匯出碼位記錄
+同時產出 .enc（FontLab）和 .txt（純文字）" onclick="exportLog()">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8m-3-3 3 3 3-3M3 13h10"/></svg>匯出記錄
+  </button>
+  <button class="btn" data-tip="匯出 Codebook PDF
+格狀或並排版面，4× 高解析度渲染" onclick="openPdfModal()">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="1" width="10" height="14" rx="1"/><path d="M6 5h4M6 8h4M6 11h2"/></svg>Codebook PDF
+  </button>
+  <button class="btn btn-danger" id="btn-clear-all" onclick="clearAll()" data-tip="一鍵清除：移除所有字型並清除記錄">清除全部</button>
+  <div class="spacer"></div>
+  <div style="display:flex;align-items:center;gap:5px;flex-shrink:0" data-tip="跳轉到指定碼位
+支援 A · 0041 · uni0041，Enter 跳轉">
+    <input type="text" id="goto-input" placeholder="🔍 Go To  A · 0041 · uni0041"
+      style="width:240px;padding:4px 9px;border:1px solid var(--border);border-radius:var(--radius);font-size:11px;font-family:var(--mono);background:var(--bg);color:var(--text);outline:none"
+      onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+      oninput="gotoGlyph(this.value)" onkeydown="if(event.key==='Enter')gotoGlyph(this.value,true)">
+    <span id="goto-status" style="font-size:11px;color:var(--text-3);font-family:var(--mono);min-width:60px"></span>
+  </div>
+  <span id="glyph-count" style="font-size:11px;color:var(--text-3);font-family:var(--mono);margin-left:8px"></span>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="ss" style="max-height:42%">
+      <div class="sh">
+        <span class="st">字型列表</span>
+        <button class="btn btn-icon" data-tip="載入字型（TTF · OTF · TTC）" onclick="document.getElementById('ffile').click()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M5 5l3-3 3 3M3 13h10"/></svg>
+        </button>
+      </div>
+      <div class="sb" id="font-list">
+        <div id="dz" onclick="document.getElementById('ffile').click()" ondragover="dzOver(event)" ondragleave="dzLeave()" ondrop="dzDrop(event)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 4v12M8 8l4-4 4 4M4 18h16"/></svg><br>
+          拖曳或點按載入字型<br><span style="font-size:10px;color:var(--text-3)">TTF &middot; OTF &middot; TTC</span>
+        </div>
+      </div>
+      <input type="file" id="ffile" accept=".ttf,.otf,.ttc" multiple onchange="handleFiles(event)" style="display:none">
+    </div>
+    <!-- METRICS -->
+    <div class="ss" style="border-top:1px solid var(--border)">
+      <div class="sh">
+        <span class="st">Metrics 疊加</span>
+        <button class="btn btn-icon" id="mall-btn" data-tip="一次開啟或關閉全部 Metrics 線" onclick="toggleAllMetrics()" style="font-size:10px;padding:3px 7px">全開</button>
+      </div>
+      <div class="mg" id="metrics-grid"></div>
+    </div>
+    <!-- CHARSET INFO -->
+    <div class="ss" style="border-top:1px solid var(--border);flex-shrink:0">
+        <div class="sh">
+          <span class="st">字元集</span>
+          <span id="cs-label" style="font-family:var(--mono);font-size:10px;color:var(--text-3)"></span>
+        </div>
+        <div style="padding:8px">
+          <select class="msel" id="cs-type-sidebar" onchange="onCsSidebarChange()"><option value="">選擇字元集</option>
+            <optgroup label="基本">
+              <option value="ascii">ASCII (U+0020–U+007E)</option>
+            </optgroup>
+            <optgroup label="MS Windows">
+              <option value="win1252">MS Windows 1252 Western</option>
+              <option value="win1250">MS Windows 1250 Central European</option>
+              <option value="win1251">MS Windows 1251 Cyrillic</option>
+              <option value="win1253">MS Windows 1253 Greek</option>
+              <option value="win1254">MS Windows 1254 Turkish</option>
+              <option value="win1255">MS Windows 1255 Hebrew</option>
+              <option value="win1256">MS Windows 1256 Arabic</option>
+              <option value="win1257">MS Windows 1257 Baltic</option>
+              <option value="win1258">MS Windows 1258 Vietnamese</option>
+              <option value="win874">MS Windows 874 Thai (OEM)</option>
+            </optgroup>
+            <optgroup label="Unicode">
+              <option value="unicode-range">自訂 Unicode 範圍</option>
+            </optgroup>
+            <optgroup label="檔案">
+              <option value="enc">載入 Encoding 檔案（.enc / .txt）</option>
+            </optgroup>
+          </select>
+        </div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div id="canvas-area" ondragover="dzOver(event)" ondragleave="dzLeave()" ondrop="dzDrop(event)">
+    <div id="canvas-scroll">
+      <div id="es" style="display:flex;align-items:center;justify-content:center;min-height:300px;height:100%">
+        <div id="es-inner" onclick="document.getElementById('ffile').click()" style="cursor:pointer;border:1.5px dashed #D1D1D6;border-radius:12px;padding:36px 48px;text-align:center;transition:border-color .15s,background .15s">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:.4;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto"><path d="M12 4v12M8 8l4-4 4 4M4 18h16"/></svg>
+          <div style="font-size:14px;color:var(--text-2);font-weight:500;margin-bottom:5px">拖曳或點按載入字型</div>
+          <div style="font-size:12px;color:var(--text-3)">支援 TTF &middot; OTF &middot; TTC</div>
+        </div>
+      </div>
+      <div id="gv" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="rp">
+    <div class="ptabs">
+      <div class="ptab active" onclick="switchTab('layout')">版面設定</div>
+      <div class="ptab" onclick="switchTab('color')">顏色</div>
+      <div class="ptab" onclick="switchTab('log')">碼位記錄</div>
+    </div>
+    <!-- LAYOUT TAB -->
+    <div class="ptbody active" id="tab-layout">
+      <div class="cg">
+        <div class="cl">字型大小（px）</div>
+        <div class="cr">
+          <input type="range" class="cslider" id="sl-size" data-tip="調整字符顯示大小（24–200 px）" min="24" max="200" value="72" oninput="syncCtrl('size')">
+          <div class="cval"><input type="number" id="n-size" value="72" min="24" max="200" oninput="syncCtrl('size',true)" onblur="syncCtrlBlur('size')"></div>
+        </div>
+      </div>
+      <div class="cg">
+        <div class="cl">字元間距（px）</div>
+        <div class="cr">
+          <input type="range" class="cslider" id="sl-spacing" data-tip="字符格子之間的水平間距（0–40 px）" min="0" max="40" value="4" oninput="syncCtrl('spacing')">
+          <div class="cval"><input type="number" id="n-spacing" value="4" min="0" max="40" oninput="syncCtrl('spacing',true)" onblur="syncCtrlBlur('spacing')"></div>
+        </div>
+      </div>
+      <div class="cg">
+        <div class="cl">行距（px）</div>
+        <div class="cr">
+          <input type="range" class="cslider" id="sl-line" data-tip="每行之間的垂直間距（0–80 px）" min="0" max="80" value="8" oninput="syncCtrl('line')">
+          <div class="cval"><input type="number" id="n-line" value="8" min="0" max="80" oninput="syncCtrl('line',true)" onblur="syncCtrlBlur('line')"></div>
+        </div>
+      </div>
+      <div class="cg">
+        <div class="cl">每行字元數（格狀）</div>
+        <div class="cr">
+          <input type="range" class="cslider" id="sl-cols" data-tip="格狀模式每行排幾個字符（4–40）" min="4" max="40" value="16" oninput="syncCtrl('cols')">
+          <div class="cval"><input type="number" id="n-cols" value="16" min="4" max="40" oninput="syncCtrl('cols',true)" onblur="syncCtrlBlur('cols')"></div>
+        </div>
+      </div>
+    </div>
+    <!-- COLOR TAB -->
+    <div class="ptbody" id="tab-color">
+      <div class="cg" style="border-bottom:none"><div class="cl">字型顏色標示</div></div>
+      <div id="color-list" style="padding:0 6px 8px"></div>
+      <div class="cg">
+        <div class="cl">疊加透明度（疊加模式）</div>
+        <div class="cr">
+          <input type="range" class="cslider" id="sl-opacity" data-tip="疊加模式各字型透明度（10–100%）" min="10" max="100" value="50" oninput="syncCtrl('opacity')">
+          <div class="cval" style="width:36px"><span id="opval">50%</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- LOG TAB -->
+    <div class="ptbody" id="tab-log">
+      <div style="padding:7px 8px 0;flex-shrink:0">
+        <input type="text" id="log-search" placeholder="🔍 搜尋 A · uni0041 · 0041"
+          oninput="renderLogList()"
+          style="width:100%;padding:5px 9px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;font-family:var(--mono);background:var(--bg);color:var(--text);outline:none"
+          onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
+      <div class="log-list" id="log-list">
+        <div class="log-empty">尚無碼位記錄<br>雙擊字元格可加入記錄<br>右鍵單擊字元格可移除</div>
+      </div>
+      <div class="log-acts">
+        <button class="btn btn-primary" style="flex:1" onclick="exportLog()">匯出記錄</button>
+        <button class="btn btn-danger" onclick="clearLog()">清除</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="sb">
+  <span id="sb-fonts">0 字型</span><div class="sbsep"></div>
+  <span id="sb-glyphs">0 字符</span><div class="sbsep"></div>
+  <span id="sb-mode">格狀</span><div class="sbsep"></div>
+  <span id="sb-log">記錄：0</span>
+</div>
+
+<!-- COLOR POPOVER -->
+<div id="cpop">
+  <div class="cpre" id="cpre"></div>
+  <div class="cp-row">
+    <input type="color" id="cp-native">
+    <input type="text" id="cp-hex" maxlength="7" placeholder="#6366F1">
+    <button class="btn btn-primary" style="padding:4px 8px;font-size:11px" onclick="applyColorPick()">套用</button>
+  </div>
+</div>
+
+<!-- CHARSET MODAL -->
+<div class="moverlay" id="charset-modal">
+  <div class="modal">
+    <h3 id="cs-modal-title">設定字元集</h3>
+    <div id="cs-extra"></div>
+    <div class="mbtns">
+      <button class="btn" onclick="closeCharsetModal()">取消</button>
+      <button class="btn btn-primary" onclick="applyCharset()">套用</button>
+    </div>
+  </div>
+</div>
+
+<!-- PDF MODAL -->
+<div class="moverlay" id="pdf-modal">
+  <div class="modal">
+    <h3>匯出 Codebook PDF</h3>
+    <label>版面配置</label>
+    <select class="msel" id="pdf-layout">
+      <option value="grid">格狀版面（單一字型）</option>
+      <option value="sxs">並排版面（多字型比對）</option>
+    </select>
+    <label>目前設定</label>
+    <div id="pdf-info" style="font-family:var(--mono);font-size:11px;color:var(--text-2);background:var(--bg-panel);border-radius:var(--radius);padding:8px 10px;line-height:1.7"></div>
+    <div class="mbtns">
+      <button class="btn" onclick="closePdfModal()">取消</button>
+      <button class="btn btn-primary" onclick="exportPDF()">產生 PDF</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+
+<script>
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+const PRESET_COLORS = ['#6366F1','#EF4444','#10B981','#F59E0B','#3B82F6','#EC4899','#8B5CF6','#14B8A6','#F97316','#06B6D4','#84CC16','#A16207'];
+
+const S = {
+  fonts: [],
+  charset: [], charsetName: 'ASCII',
+  view: 'grid',
+  size: 72, spacing: 4, lineSpacing: 8, cols: 16,
+  overlayOpacity: 0.5,
+  showBorder: true,      // cell border on/off
+  showLogHL: true,       // issue log red highlight on/off
+  metrics: {
+    baseline:      {label:'Baseline',       color:'#3B82F6', on:true},
+    hheaAscent:    {label:'hhea Ascent',    color:'#8B5CF6', on:false},
+    hheaDescent:   {label:'hhea Descent',   color:'#8B5CF6', on:false},
+    typoAscender:  {label:'Typo Ascender',  color:'#10B981', on:false},
+    typoDescender: {label:'Typo Descender', color:'#10B981', on:false},
+    xHeight:       {label:'x-height',       color:'#F59E0B', on:false},
+    capHeight:     {label:'Cap Height',     color:'#EF4444', on:false},
+  },
+  log: new Set(),
+};
+
+let encFileCodes = null;
+let uniRangeStr  = 'U+0041-U+005A, U+0061-U+007A';
+let colorPickFontId = null;
+
+// ═══════════════════════════════════════
+// FONT LOADING
+// ═══════════════════════════════════════
+function dzOver(e)  {
+  e.preventDefault();
+  const dz = document.getElementById('dz');
+  if (dz) dz.classList.add('over');
+  const ei = document.getElementById('es-inner');
+  if (ei) { ei.style.borderColor = 'var(--accent)'; ei.style.background = 'var(--accent-light)'; ei.style.color = 'var(--accent)'; }
+}
+function dzLeave()  {
+  const dz = document.getElementById('dz');
+  if (dz) dz.classList.remove('over');
+  const ei = document.getElementById('es-inner');
+  if (ei) { ei.style.borderColor = ''; ei.style.background = ''; }
+}
+function dzDrop(e)  { e.preventDefault(); dzLeave(); loadFontFiles([...e.dataTransfer.files]) }
+function handleFiles(e) { loadFontFiles([...e.target.files]); e.target.value = '' }
+
+async function loadFontFiles(files) {
+  if (!files || !files.length) return;
+  if (typeof opentype === 'undefined') { toast('錯誤：opentype.js 未載入，請確認網路連線'); return; }
+  for (const file of files) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['ttf','otf','ttc'].includes(ext)) { toast('不支援：' + file.name); continue }
+    try {
+      const buf = await file.arrayBuffer();
+      if (ext === 'ttc') {
+        const dv  = new DataView(buf);
+        const tag = String.fromCharCode(dv.getUint8(0),dv.getUint8(1),dv.getUint8(2),dv.getUint8(3));
+        if (tag === 'ttcf') {
+          const n = dv.getUint32(8);
+          for (let i = 0; i < n; i++) {
+            try { addFont(file.name, '[' + (i+1) + ']', opentype.parse(buf, {offset: dv.getUint32(12+i*4)})) }
+            catch(e2) { toast('TTC subfont ' + (i+1) + ' failed') }
+          }
+        } else { addFont(file.name, '', opentype.parse(buf)) }
+      } else {
+        addFont(file.name, '', opentype.parse(buf));
+      }
+    } catch(err) { toast('載入失敗：' + file.name) }
+  }
+  renderFontList(); renderGlyphs(); updateStatus();
+}
+
+function getFontName(otf, fb) {
+  try {
+    const n = otf.names;
+    const g = id => { const x = n[id]; if (!x) return null; return x['zh']||x['zh-TW']||x['en']||Object.values(x)[0]||null };
+    return g(4) || g(1) || fb;
+  } catch(e) { return fb }
+}
+
+function addFont(fileName, sub, otFont) {
+  const id    = Date.now() + Math.random();
+  const name  = getFontName(otFont, fileName + (sub ? ' ' + sub : ''));
+  const color = PRESET_COLORS[S.fonts.length % PRESET_COLORS.length];
+  S.fonts.push({ id, name, otFont, color, enabled: true });
+}
+
+function removeFont(id) { S.fonts = S.fonts.filter(f => f.id !== id); renderFontList(); renderColorList(); renderGlyphs(); updateStatus() }
+function toggleFont(id) { const f = S.fonts.find(f => f.id === id); if (f) { f.enabled = !f.enabled; renderFontList(); renderGlyphs(); updateStatus() } }
+
+function renderFontList() {
+  const body = document.getElementById('font-list');
+  [...body.querySelectorAll('.fi')].forEach(el => el.remove());
+  const dz = document.getElementById('dz');
+  S.fonts.forEach(f => {
+    const el = document.createElement('div'); el.className = 'fi';
+    el.innerHTML = '<div class="fdot" style="background:' + f.color + '"></div>'
+      + '<div class="finfo"><div class="fname" title="' + f.name + '">' + f.name + '</div></div>'
+      + '<button class="ftog ' + (f.enabled ? 'on' : '') + '" onclick="toggleFont(' + f.id + ')"></button>'
+      + '<button class="frem" onclick="removeFont(' + f.id + ')">&#xD7;</button>';
+    body.insertBefore(el, dz);
+  });
+  renderColorList();
+}
+
+// ═══════════════════════════════════════
+// CHARSET
+// ═══════════════════════════════════════
+function initCharset() {
+  S.charset = []; for (let i = 0x20; i <= 0x7E; i++) S.charset.push(i);
+  S.charsetName = 'ASCII'; updateCsLabel();
+}
+
+function openCharsetModal()  {
+  document.getElementById('charset-modal').classList.add('show');
+  onCsTypeChange();
+}
+function closeCharsetModal() {
+  document.getElementById('charset-modal').classList.remove('show');
+  // Reset to blank so re-selecting same option fires onchange again
+  const sel = document.getElementById('cs-type-sidebar');
+  if (sel) {
+    const v = sel.value;
+    if (v === 'unicode-range' || v === 'enc') sel.value = '';
+  }
+}
+
+function onCsTypeChange() {
+  const t = document.getElementById('cs-type-sidebar').value;
+
+  const ex = document.getElementById('cs-extra');
+  const title = document.getElementById('cs-modal-title');
+  if (t === 'unicode-range') {
+    if (title) title.textContent = 'Unicode 範圍';
+    ex.innerHTML = '<input class="minput" id="ur-input" value="' + uniRangeStr + '" placeholder="U+0041-U+005A, U+0061-U+007A">'
+      + '<div class="hint">以逗號分隔多個範圍，例：U+4E00-U+9FFF, U+0E00-U+0E7F</div>';
+  } else if (t === 'enc') {
+    if (title) title.textContent = '載入 Encoding 檔案';
+    ex.innerHTML = '<input type="file" accept=".enc,.txt" id="enc-input" onchange="loadEncFile(event)" style="margin-bottom:6px">'
+      + '<div class="hint">支援 FontLab Encoding（.enc）及純文字字串（.txt）</div>'
+      + '<div id="enc-preview" style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-top:4px"></div>';
+    encFileCodes = null;
+  } else { ex.innerHTML = '' }
+}
+
+// 從側邊下拉選單改變字元集
+function onCsSidebarChange() {
+  const sel = document.getElementById('cs-type-sidebar');
+  const v = sel.value;
+  const modalSel = document.getElementById('cs-type');
+  if (modalSel) modalSel.value = v;
+  if (v === 'unicode-range' || v === 'enc') {
+    openCharsetModal();
+  } else {
+    applyCharset();
+  }
+}
+
+function loadEncFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    const raw = ev.target.result;
+    encFileCodes = [];
+    // Skip %% comment lines
+    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('%%'));
+    const isFormatA = lines.some(l => /^uni[0-9A-Fa-f]{4,6}$/i.test(l));
+    if (isFormatA) {
+      // Format A: uni0041 per line
+      for (const line of lines) {
+        if (/^uni[0-9A-Fa-f]{4,6}$/i.test(line)) encFileCodes.push(parseInt(line.slice(3), 16));
+      }
+    } else {
+      // Format C: plain text string — treat entire content as sequence of chars
+      const plainText = lines.join('');
+      for (const ch of plainText) encFileCodes.push(ch.codePointAt(0));
+    }
+    encFileCodes = [...new Set(encFileCodes)];
+    document.getElementById('enc-preview').textContent = '已載入 ' + encFileCodes.length + ' 個字符';
+  };
+  r.readAsText(file, 'utf-8');
+}
+
+function applyCharset() {
+  // Read type from sidebar select (single source of truth)
+  const sidebar = document.getElementById('cs-type-sidebar');
+  const t = sidebar ? sidebar.value : '';
+  if (t === 'ascii') {
+    S.charset = []; for (let i = 0x20; i <= 0x7E; i++) S.charset.push(i); S.charsetName = 'ASCII';
+  } else if (t.startsWith('win')) {
+    const c = parseInt(t.slice(3)); S.charset = getWinCharset(c); S.charsetName = 'Windows ' + c;
+  } else if (t === 'unicode-range') {
+    uniRangeStr = document.getElementById('ur-input').value;
+    S.charset = parseUniRange(uniRangeStr);
+    if (!S.charset.length) { toast('無效 Unicode 範圍'); return }
+    S.charsetName = 'Unicode Range (' + S.charset.length + ')';
+  } else if (t === 'enc') {
+    if (!encFileCodes || !encFileCodes.length) { toast('請先載入 .enc 檔案'); return }
+    S.charset = encFileCodes; S.charsetName = '.enc (' + S.charset.length + ')';
+  } else { return }
+  updateCsLabel(); closeCharsetModal(); renderGlyphs(); updateStatus();
+}
+
+function parseUniRange(raw) {
+  const codes = [];
+  for (const p of raw.split(',')) {
+    const t = p.trim();
+    const r = t.match(/^U\+([0-9A-Fa-f]+)-U\+([0-9A-Fa-f]+)$/);
+    if (r) { const s = parseInt(r[1],16), e = parseInt(r[2],16); if (s<=e&&e<=0x10FFFF) for (let i=s;i<=e;i++) codes.push(i) }
+    else { const m = t.match(/^U\+([0-9A-Fa-f]+)$/); if (m) codes.push(parseInt(m[1],16)) }
+  }
+  return [...new Set(codes)];
+}
+
+function updateCsLabel() {
+  if (!S.charset.length) {
+    document.getElementById('cs-label').textContent = '';
+    document.getElementById('glyph-count').textContent = '';
+  } else {
+    document.getElementById('cs-label').textContent = S.charsetName + ' · ' + S.charset.length;
+    document.getElementById('glyph-count').textContent = S.charset.length + ' 字符';
+  }
+}
+
+function getWinCharset(cp) {
+  const sp = {
+    1252:{0x80:0x20AC,0x82:0x201A,0x83:0x0192,0x84:0x201E,0x85:0x2026,0x86:0x2020,0x87:0x2021,0x88:0x02C6,0x89:0x2030,0x8A:0x0160,0x8B:0x2039,0x8C:0x0152,0x8E:0x017D,0x91:0x2018,0x92:0x2019,0x93:0x201C,0x94:0x201D,0x95:0x2022,0x96:0x2013,0x97:0x2014,0x98:0x02DC,0x99:0x2122,0x9A:0x0161,0x9B:0x203A,0x9C:0x0153,0x9E:0x017E,0x9F:0x0178},
+    1250:{0x80:0x20AC,0x82:0x201A,0x84:0x201E,0x85:0x2026,0x86:0x2020,0x87:0x2021,0x89:0x2030,0x8A:0x0160,0x8B:0x2039,0x8C:0x015A,0x8D:0x0164,0x8E:0x017D,0x8F:0x0179,0x91:0x2018,0x92:0x2019,0x93:0x201C,0x94:0x201D,0x95:0x2022,0x96:0x2013,0x97:0x2014,0x99:0x2122,0x9A:0x0161,0x9B:0x203A,0x9C:0x015B,0x9D:0x0165,0x9E:0x017E,0x9F:0x017A},
+    1251:{0x80:0x0402,0x81:0x0403,0x82:0x201A,0x83:0x0453,0x84:0x201E,0x85:0x2026,0x86:0x2020,0x87:0x2021,0x88:0x20AC,0x89:0x2030,0x8A:0x0409,0x8B:0x2039,0x8C:0x040A,0x8D:0x040C,0x8E:0x040B,0x8F:0x040F,0x90:0x0452,0x91:0x2018,0x92:0x2019,0x93:0x201C,0x94:0x201D,0x95:0x2022,0x96:0x2013,0x97:0x2014,0x99:0x2122,0x9A:0x0459,0x9B:0x203A,0x9C:0x045A,0x9D:0x045C,0x9E:0x045B,0x9F:0x045F},
+    1253:{0x80:0x20AC,0x82:0x201A,0x83:0x0192,0x84:0x201E,0x85:0x2026,0x86:0x2020,0x87:0x2021,0x89:0x2030,0x8B:0x2039,0x91:0x2018,0x92:0x2019,0x93:0x201C,0x94:0x201D,0x95:0x2022,0x96:0x2013,0x97:0x2014,0x99:0x2122,0x9B:0x203A},
+    1254:{0x80:0x20AC,0x82:0x201A,0x83:0x0192,0x84:0x201E,0x85:0x2026,0x86:0x2020,0x87:0x2021,0x88:0x02C6,0x89:0x2030,0x8A:0x0160,0x8B:0x2039,0x8C:0x0152,0x91:0x2018,0x92:0x2019,0x93:0x201C,0x94:0x201D,0x95:0x2022,0x96:0x2013,0x97:0x2014,0x98:0x02DC,0x99:0x2122,0x9A:0x0161,0x9B:0x203A,0x9C:0x0153,0x9F:0x0178},
+    1255:{0x80:0x20AC,0x82:0x201A,0x83:0x0192,0x84:0x201E,0x85:0x2026,0x86:0x2020,0x87:0x2021,0x88:0x02C6,0x89:0x2030,0x8B:0x2039,0x91:0x2018,0x92:0x2019,0x93:0x201C,0x94:0x201D,0x95:0x2022,0x96:0x2013,0x97:0x2014,0x98:0x02DC,0x99:0x2122,0x9B:0x203A},
+    1256:{0x80:0x20AC,0x81:0x067E,0x82:0x201A,0x83:0x0192,0x84:0x201E,0x85:0x2026,0x86:0x2020,0x87:0x2021,0x88:0x02C6,0x89:0x2030,0x8A:0x0679,0x8B:0x2039,0x8C:0x0152,0x8D:0x0686,0x8E:0x0698,0x8F:0x0688,0x90:0x06AF,0x91:0x2018,0x92:0x2019,0x93:0x201C,0x94:0x201D,0x95:0x2022,0x96:0x2013,0x97:0x2014,0x98:0x06A9,0x99:0x2122,0x9A:0x0691,0x9B:0x203A,0x9C:0x0153,0x9D:0x200C,0x9E:0x200D,0x9F:0x06BA},
+    1257:{0x80:0x20AC,0x82:0x201A,0x84:0x201E,0x85:0x2026,0x86:0x2020,0x87:0x2021,0x89:0x2030,0x8B:0x2039,0x8D:0x00A8,0x8F:0x02C7,0x91:0x2018,0x92:0x2019,0x93:0x201C,0x94:0x201D,0x95:0x2022,0x96:0x2013,0x97:0x2014,0x99:0x2122,0x9B:0x203A,0x9D:0x00AF,0x9F:0x02D9},
+    1258:{0x80:0x20AC,0x82:0x201A,0x83:0x0192,0x84:0x201E,0x85:0x2026,0x86:0x2020,0x87:0x2021,0x88:0x02C6,0x89:0x2030,0x8B:0x2039,0x8C:0x0152,0x91:0x2018,0x92:0x2019,0x93:0x201C,0x94:0x201D,0x95:0x2022,0x96:0x2013,0x97:0x2014,0x98:0x02DC,0x99:0x2122,0x9B:0x203A,0x9C:0x0153,0x9F:0x0178},
+    874:{
+      0x80:0x20AC,0x85:0x2026,0x91:0x2018,0x92:0x2019,0x93:0x201C,0x94:0x201D,0x95:0x2022,0x96:0x2013,0x97:0x2014,0x99:0x2122,
+      0xA0:0x00A0,
+      0xA1:0x0E01,0xA2:0x0E02,0xA3:0x0E03,0xA4:0x0E04,0xA5:0x0E05,0xA6:0x0E06,0xA7:0x0E07,0xA8:0x0E08,0xA9:0x0E09,0xAA:0x0E0A,0xAB:0x0E0B,0xAC:0x0E0C,0xAD:0x0E0D,0xAE:0x0E0E,0xAF:0x0E0F,
+      0xB0:0x0E10,0xB1:0x0E11,0xB2:0x0E12,0xB3:0x0E13,0xB4:0x0E14,0xB5:0x0E15,0xB6:0x0E16,0xB7:0x0E17,0xB8:0x0E18,0xB9:0x0E19,0xBA:0x0E1A,0xBB:0x0E1B,0xBC:0x0E1C,0xBD:0x0E1D,0xBE:0x0E1E,0xBF:0x0E1F,
+      0xC0:0x0E20,0xC1:0x0E21,0xC2:0x0E22,0xC3:0x0E23,0xC4:0x0E24,0xC5:0x0E25,0xC6:0x0E26,0xC7:0x0E27,0xC8:0x0E28,0xC9:0x0E29,0xCA:0x0E2A,0xCB:0x0E2B,0xCC:0x0E2C,0xCD:0x0E2D,0xCE:0x0E2E,0xCF:0x0E2F,
+      0xD0:0x0E30,0xD1:0x0E31,0xD2:0x0E32,0xD3:0x0E33,0xD4:0x0E34,0xD5:0x0E35,0xD6:0x0E36,0xD7:0x0E37,0xD8:0x0E38,0xD9:0x0E39,0xDA:0x0E3A,
+      0xDF:0x0E3F,
+      0xE0:0x0E40,0xE1:0x0E41,0xE2:0x0E42,0xE3:0x0E43,0xE4:0x0E44,0xE5:0x0E45,0xE6:0x0E46,0xE7:0x0E47,0xE8:0x0E48,0xE9:0x0E49,0xEA:0x0E4A,0xEB:0x0E4B,0xEC:0x0E4C,0xED:0x0E4D,0xEE:0x0E4E,0xEF:0x0E4F,
+      0xF0:0x0E50,0xF1:0x0E51,0xF2:0x0E52,0xF3:0x0E53,0xF4:0x0E54,0xF5:0x0E55,0xF6:0x0E56,0xF7:0x0E57,0xF8:0x0E58,0xF9:0x0E59,0xFA:0x0E5A,0xFB:0x0E5B
+    }
+  };
+  const m = sp[cp] || {};
+  // For cp874, the entire 0xA0–0xFF range is remapped to Thai Unicode
+  // For other codepages, 0xA0–0xFF is direct Latin-1
+  const fullRemap = (cp === 874);
+  const codes = [];
+  for (let i = 0x20; i <= 0xFF; i++) {
+    if (m[i] !== undefined) {
+      codes.push(m[i]);                     // explicit special mapping
+    } else if (i >= 0x80 && i <= 0x9F) {
+      // undefined in 0x80–0x9F control area → skip
+    } else if (fullRemap && i >= 0xA0) {
+      // undefined in 874 upper range → skip (e.g. 0xDB–0xDE, 0xFC–0xFF)
+    } else {
+      codes.push(i);                        // direct value (ASCII + Latin-1)
+    }
+  }
+  return codes;
+}
+
+// ═══════════════════════════════════════
+// METRICS UI
+// ═══════════════════════════════════════
+function initMetricsUI() {
+  const g = document.getElementById('metrics-grid'); g.innerHTML = '';
+  Object.entries(S.metrics).forEach(([key, m]) => {
+    const el = document.createElement('label'); el.className = 'mt';
+    el.innerHTML = '<input type="checkbox" class="mcb" ' + (m.on ? 'checked' : '') + ' onchange="toggleMetric(\'' + key + '\')">'
+      + '<div class="mdot" style="background:' + m.color + '"></div>'
+      + '<span class="mlabel">' + m.label + '</span>';
+    g.appendChild(el);
+  });
+}
+function toggleMetric(key) { S.metrics[key].on = !S.metrics[key].on; renderGlyphs() }
+function toggleAllMetrics() {
+  const any = Object.values(S.metrics).some(m => m.on);
+  Object.values(S.metrics).forEach(m => m.on = !any);
+  document.getElementById('mall-btn').textContent = any ? '全開' : '全關';
+  initMetricsUI(); renderGlyphs();
+}
+
+// ═══════════════════════════════════════
+// BORDER & LOG-HIGHLIGHT TOGGLES
+// ═══════════════════════════════════════
+function toggleBorder() {
+  S.showBorder = !S.showBorder;
+  document.getElementById('btn-border').classList.toggle('active', S.showBorder);
+  // Apply to all existing cells without full re-render
+  document.querySelectorAll('.gc').forEach(cell => {
+    cell.style.border = S.showBorder ? '' : '1px solid transparent';
+    const lbl = cell.querySelector('.glabel');
+    if (lbl) lbl.style.borderTop = S.showBorder ? '' : '1px solid transparent';
+  });
+}
+
+function toggleLogHL() {
+  S.showLogHL = !S.showLogHL;
+  document.getElementById('btn-hl').classList.toggle('active', S.showLogHL);
+  refreshLogHighlights();
+}
+
+// ═══════════════════════════════════════
+// GLYPH RENDERING
+// ═══════════════════════════════════════
+function getMetrics(otf, px) {
+  const upm = otf.unitsPerEm, sc = px / upm;
+  const os2 = otf.tables.os2, hhea = otf.tables.hhea;
+  const ha = hhea ? hhea.ascender : upm*0.8, hd = hhea ? hhea.descender : -upm*0.2;
+  return {
+    baseline: 0, hheaAscent: ha*sc, hheaDescent: hd*sc,
+    typoAscender:  os2 ? os2.sTypoAscender*sc  : 0,
+    typoDescender: os2 ? os2.sTypoDescender*sc : 0,
+    xHeight:   os2 ? (os2.sxHeight  || 0)*sc : 0,
+    capHeight: os2 ? (os2.sCapHeight|| 0)*sc : 0,
+    hhea_asc: ha*sc, hhea_desc: hd*sc,
+  };
+}
+
+function getCellDims(px) {
+  const af = S.fonts.filter(f => f.enabled);
+  if (!af.length) return { w: px+16, h: px+8 };
+  // Take max height across ALL enabled fonts so cells are uniform
+  let maxH = px + 8;
+  af.forEach(font => {
+    const m = getMetrics(font.otFont, px);
+    maxH = Math.max(maxH, Math.ceil(m.hhea_asc - m.hhea_desc) + 8);
+  });
+  return { w: px+16, h: maxH };
+}
+
+function drawGlyph(canvas, cp, font, px, color, opacity, drawMet, isOverlay) {
+  const ctx = canvas.getContext('2d');
+  if (!isOverlay) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const m = getMetrics(font.otFont, px);
+  // Use unified baseline: anchor based on the tallest font across all enabled fonts
+  // so all glyphs share the same baseline Y within the unified cell height
+  const allFonts = S.fonts.filter(f => f.enabled);
+  let maxAsc = m.hhea_asc, maxDesc = m.hhea_desc;
+  allFonts.forEach(f => {
+    const fm = getMetrics(f.otFont, px);
+    if (fm.hhea_asc > maxAsc)   maxAsc  = fm.hhea_asc;
+    if (fm.hhea_desc < maxDesc) maxDesc = fm.hhea_desc;
+  });
+  const totalH = maxAsc - maxDesc;
+  const baselineY = (canvas.height - totalH) / 2 + maxAsc;
+  const glyph = font.otFont.charToGlyph(String.fromCodePoint(cp));
+  const adv = glyph ? (glyph.advanceWidth || 0) * (px / font.otFont.unitsPerEm) : px;
+  const ox = Math.max(0, (canvas.width - adv) / 2);
+  if (glyph && glyph.index !== 0) {
+    ctx.save();
+    if (isOverlay) {
+      const tmp = document.createElement('canvas'); tmp.width = canvas.width; tmp.height = canvas.height;
+      const tc = tmp.getContext('2d');
+      tc.fillStyle = color;
+      tc.fill(new Path2D(glyph.getPath(ox, baselineY, px).toPathData(4)));
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.globalAlpha = opacity;
+      ctx.drawImage(tmp, 0, 0);
+    } else {
+      ctx.globalAlpha = opacity; ctx.fillStyle = color;
+      ctx.fill(new Path2D(glyph.getPath(ox, baselineY, px).toPathData(4)));
+    }
+    ctx.restore();
+  }
+  if (drawMet) {
+    const yo = baselineY;
+    const dl = (yv, col, dash=[]) => {
+      ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.setLineDash(dash); ctx.globalAlpha = 0.7;
+      ctx.beginPath(); ctx.moveTo(0, yo-yv); ctx.lineTo(canvas.width, yo-yv); ctx.stroke(); ctx.restore();
+    };
+    const ms = S.metrics;
+    if (ms.baseline.on)      dl(m.baseline,      ms.baseline.color);
+    if (ms.hheaAscent.on)    dl(m.hheaAscent,    ms.hheaAscent.color,    [3,3]);
+    if (ms.hheaDescent.on)   dl(m.hheaDescent,   ms.hheaDescent.color,   [3,3]);
+    if (ms.typoAscender.on)  dl(m.typoAscender,  ms.typoAscender.color,  [4,2]);
+    if (ms.typoDescender.on) dl(m.typoDescender, ms.typoDescender.color, [4,2]);
+    if (ms.xHeight.on)       dl(m.xHeight,       ms.xHeight.color,       [2,4]);
+    if (ms.capHeight.on)     dl(m.capHeight,      ms.capHeight.color,     [2,4]);
+  }
+}
+
+// ═══════════════════════════════════════
+// VIEW RENDERING
+// ═══════════════════════════════════════
+function renderGlyphs() {
+  const gv = document.getElementById('gv'), es = document.getElementById('es');
+  clearGotoHighlight && clearGotoHighlight();
+  const af = S.fonts.filter(f => f.enabled);
+  if (!af.length || !S.charset.length) { gv.style.display = 'none'; es.style.display = 'flex'; return }
+  gv.style.display = ''; es.style.display = 'none';
+  if      (S.view === 'grid')    renderGrid(gv, af);
+  else if (S.view === 'sxs')     renderSxS(gv, af);
+  else                           renderOverlay(gv, af);
+}
+
+function makeCell(cp) {
+  const cell = document.createElement('div'); cell.className = 'gc';
+  if (!S.showBorder) cell.style.border = '1px solid transparent';
+  const uni = toUni(cp);
+  if (S.log.has(uni) && S.showLogHL) cell.classList.add('in-log', 'hl-on');
+  else if (S.log.has(uni)) cell.classList.add('in-log');
+  cell.addEventListener('dblclick', () => addLog(cp));
+  cell.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const key = toUni(cp);
+    if (S.log.has(key)) { removeLog(key); toast('已移除：' + key); }
+    // if not in log, do nothing (no browser menu)
+  });
+  return cell;
+}
+
+function makeLabel(cp) {
+  const lbl = document.createElement('div'); lbl.className = 'glabel';
+  if (!S.showBorder) lbl.style.borderTop = '1px solid transparent';
+  lbl.textContent = toUni(cp);
+  return lbl;
+}
+
+// GRID VIEW — one grid per font, stacked vertically
+function renderGrid(container, fonts) {
+  container.innerHTML = '';
+  const { w, h } = getCellDims(S.size);
+  const rowW = S.cols * w + (S.cols - 1) * S.spacing;
+  fonts.forEach(font => {
+    const blk = document.createElement('div');
+    blk.style.cssText = 'margin-bottom:' + S.lineSpacing + 'px;display:block';
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'font-size:11px;font-weight:600;color:var(--text-3);padding:3px 1px 5px;display:flex;align-items:center;gap:5px';
+    hdr.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + font.color + '"></span>' + font.name;
+    blk.appendChild(hdr);
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:' + S.spacing + 'px;row-gap:' + (S.spacing + S.lineSpacing) + 'px';
+    S.charset.forEach(cp => {
+      const cell = makeCell(cp);
+      cell.style.width = w + 'px';
+      cell.style.flexShrink = '0';
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      drawGlyph(cv, cp, font, S.size, font.color, 1, true, false);
+      cell.appendChild(cv); cell.appendChild(makeLabel(cp)); grid.appendChild(cell);
+    });
+    blk.appendChild(grid); container.appendChild(blk);
+  });
+}
+
+// SIDE-BY-SIDE VIEW
+// Layout: glyph-interleaved
+// For each glyph, show all fonts side by side, then next glyph:
+// A(FontA) A(FontB) | B(FontA) B(FontB) | C(FontA) C(FontB) ...
+// Each "glyph group" = nFonts cells, separated by a small gap
+// Groups wrap into rows; S.cols controls how many GLYPH GROUPS per row
+function renderSxS(container, fonts) {
+  container.innerHTML = '';
+  const { w, h } = getCellDims(S.size);
+  const cellGap   = 1;                           // gap between fonts within one glyph group
+  const groupGap  = S.spacing;                   // gap between glyph groups
+  const lineGap   = S.lineSpacing;               // gap between rows
+  const groupW    = fonts.length * w + (fonts.length - 1) * cellGap; // width of one glyph group
+
+  // Legend header
+  const legend = document.createElement('div');
+  legend.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;padding:4px 0 8px;font-size:11px;color:var(--text-3);align-items:center';
+  fonts.forEach(f => {
+    legend.innerHTML += '<span style="display:flex;align-items:center;gap:4px;font-weight:600">'
+      + '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + f.color + '"></span>' + f.name + '</span>';
+  });
+  container.appendChild(legend);
+
+  // Thin separator under legend
+  const sep = document.createElement('div');
+  sep.style.cssText = 'height:1px;background:var(--border);margin-bottom:8px';
+  container.appendChild(sep);
+
+  // Wrap area — each item is a "glyph group"
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:' + groupGap + 'px;row-gap:' + lineGap + 'px;align-content:flex-start';
+
+  S.charset.forEach(cp => {
+    // One group = all fonts for this glyph
+    const group = document.createElement('div');
+    group.style.cssText = 'display:flex;flex-direction:row;gap:' + cellGap + 'px;flex-shrink:0';
+
+    fonts.forEach(font => {
+      const gc = makeCell(cp);
+      gc.style.width  = w + 'px';
+      gc.style.flexShrink = '0';
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      drawGlyph(cv, cp, font, S.size, font.color, 1, true, false);
+      gc.appendChild(cv); gc.appendChild(makeLabel(cp)); group.appendChild(gc);
+    });
+
+    wrap.appendChild(group);
+  });
+
+  container.appendChild(wrap);
+}
+
+// OVERLAY VIEW
+function renderOverlay(container, fonts) {
+  container.innerHTML = '';
+  const { w, h } = getCellDims(S.size);
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'font-size:11px;color:var(--text-3);padding:3px 1px 8px;display:flex;flex-wrap:wrap;gap:10px;align-items:center';
+  fonts.forEach(f => hdr.innerHTML += '<span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + f.color + '"></span>' + f.name + '</span>');
+  container.appendChild(hdr);
+  const grid = document.createElement('div'); grid.className = 'glyph-grid';
+  grid.style.gridTemplateColumns = 'repeat(auto-fill, ' + w + 'px)';
+  grid.style.gap = S.spacing + 'px'; grid.style.rowGap = S.lineSpacing + 'px';
+  S.charset.forEach(cp => {
+    const cell = makeCell(cp);
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const ctx = cv.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+    fonts.forEach((font, idx) => drawGlyph(cv, cp, font, S.size, font.color, S.overlayOpacity, idx === 0, true));
+    cell.appendChild(cv); cell.appendChild(makeLabel(cp)); grid.appendChild(cell);
+  });
+  container.appendChild(grid);
+}
+
+// ═══════════════════════════════════════
+// VIEW MODE & CONTROLS
+// ═══════════════════════════════════════
+function setView(mode) {
+  S.view = mode;
+  ['grid','sxs','overlay'].forEach(m => document.getElementById('btn-' + m).classList.toggle('active', m === mode));
+  document.getElementById('sb-mode').textContent = {grid:'格狀', sxs:'並排', overlay:'疊加'}[mode];
+  renderGlyphs();
+}
+
+function syncCtrl(key, fromInput) {
+  const map = {
+    size:    ['sl-size',    'n-size',    24, 200],
+    spacing: ['sl-spacing', 'n-spacing',  0,  40],
+    line:    ['sl-line',    'n-line',     0,  80],
+    cols:    ['sl-cols',    'n-cols',     4,  40],
+    opacity: ['sl-opacity', null,        10, 100],
+  };
+  const [slId, nId, min, max] = map[key];
+  if (fromInput) {
+    // User is typing — don't clamp or re-render mid-input
+    const raw = document.getElementById(nId).value;
+    const val = parseInt(raw);
+    if (isNaN(val)) return;           // still typing, ignore
+    if (val < min || val > max) return; // out of range, don't clamp yet
+    // Valid value — sync slider and render
+    document.getElementById(slId).value = val;
+    applyCtrl(key, val);
+  } else {
+    // Slider moved — always clamp and render
+    let val = parseInt(document.getElementById(slId).value);
+    if (isNaN(val)) return;
+    val = Math.max(min, Math.min(max, val));
+    document.getElementById(slId).value = val;
+    if (nId) document.getElementById(nId).value = val;
+    applyCtrl(key, val);
+  }
+}
+
+function syncCtrlBlur(key) {
+  // On blur, clamp whatever is in the input box
+  const map = {
+    size:    ['sl-size',    'n-size',    24, 200],
+    spacing: ['sl-spacing', 'n-spacing',  0,  40],
+    line:    ['sl-line',    'n-line',     0,  80],
+    cols:    ['sl-cols',    'n-cols',     4,  40],
+  };
+  if (!map[key]) return;
+  const [slId, nId, min, max] = map[key];
+  let val = parseInt(document.getElementById(nId).value);
+  if (isNaN(val)) val = min;
+  val = Math.max(min, Math.min(max, val));
+  document.getElementById(nId).value = val;
+  document.getElementById(slId).value = val;
+  applyCtrl(key, val);
+}
+
+function applyCtrl(key, val) {
+  if      (key === 'size')    S.size          = val;
+  else if (key === 'spacing') S.spacing       = val;
+  else if (key === 'line')    S.lineSpacing   = val;
+  else if (key === 'cols')    S.cols          = val;
+  else if (key === 'opacity') { S.overlayOpacity = val/100; document.getElementById('opval').textContent = val + '%' }
+  renderGlyphs();
+}
+
+// ═══════════════════════════════════════
+// COLOR POPOVER
+// ═══════════════════════════════════════
+function renderColorList() {
+  const list = document.getElementById('color-list'); list.innerHTML = '';
+  if (!S.fonts.length) { list.innerHTML = '<div class="log-empty">尚未載入字型</div>'; return }
+  S.fonts.forEach(f => {
+    const row = document.createElement('div'); row.className = 'color-row';
+    row.innerHTML = '<div class="cswatch" id="sw-' + f.id + '" style="background:' + f.color + '" onclick="openColorPick(' + f.id + ',event)"></div>'
+      + '<span class="cname" title="' + f.name + '">' + f.name + '</span>'
+      + '<span class="chex">' + f.color.toUpperCase() + '</span>';
+    list.appendChild(row);
+  });
+}
+
+function buildPresets() {
+  const el = document.getElementById('cpre'); el.innerHTML = '';
+  PRESET_COLORS.forEach(c => {
+    const sw = document.createElement('div'); sw.className = 'cpsw'; sw.style.background = c; sw.title = c;
+    sw.onclick = () => { document.getElementById('cp-hex').value = c; document.getElementById('cp-native').value = c };
+    el.appendChild(sw);
+  });
+}
+
+function openColorPick(fontId, e) {
+  e.stopPropagation();
+  colorPickFontId = fontId;
+  const f = S.fonts.find(f => f.id === fontId); if (!f) return;
+  const pop = document.getElementById('cpop');
+  buildPresets();
+  document.getElementById('cp-native').value = f.color;
+  document.getElementById('cp-hex').value    = f.color.toUpperCase();
+  document.getElementById('cp-native').oninput = ev => {
+    document.getElementById('cp-hex').value = ev.target.value.toUpperCase();
+  };
+  // Initial position — place left of the swatch
+  const rect = e.currentTarget.getBoundingClientRect();
+  pop.style.left = '0px'; pop.style.top = '0px'; pop.style.display = 'flex';
+  const pw = pop.offsetWidth, ph = pop.offsetHeight;
+  // Try left of swatch first, then right
+  let left = rect.left - pw - 6;
+  if (left < 4) left = rect.right + 6;
+  // Clamp vertically
+  let top = rect.top;
+  if (top + ph > window.innerHeight - 4) top = window.innerHeight - ph - 4;
+  if (top < 4) top = 4;
+  pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  pop.classList.add('show');
+}
+
+function applyColorPick() {
+  if (!colorPickFontId) return;
+  const hex = document.getElementById('cp-hex').value.trim();
+  if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) { toast('格式：#RRGGBB'); return }
+  const f = S.fonts.find(f => f.id === colorPickFontId);
+  if (f) { f.color = hex; renderFontList(); renderColorList(); renderGlyphs() }
+  closeColorPick();
+}
+
+function closeColorPick() { document.getElementById('cpop').classList.remove('show'); colorPickFontId = null }
+
+document.addEventListener('click', e => {
+  const pop = document.getElementById('cpop');
+  if (pop.classList.contains('show') && !pop.contains(e.target)) closeColorPick();
+});
+
+// ═══════════════════════════════════════
+// ISSUE LOG
+// ═══════════════════════════════════════
+function toUni(cp) { return 'uni' + cp.toString(16).toUpperCase().padStart(4, '0') }
+
+function addLog(cp) {
+  const key = toUni(cp);
+  if (S.log.has(key)) { toast(key + ' 已在記錄中'); return }
+  S.log.add(key); renderLogList(); updateStatus(); refreshLogHighlights();
+  switchTab('log'); toast('已加入：' + key);
+}
+
+function removeLog(key) { S.log.delete(key); renderLogList(); updateStatus(); refreshLogHighlights() }
+function clearLog() {
+  if (!S.log.size) return;
+  S.log.clear(); renderLogList(); updateStatus(); refreshLogHighlights(); toast('已清除');
+}
+
+function renderLogList() {
+  const list = document.getElementById('log-list');
+  if (!S.log.size) {
+    list.innerHTML = '<div class="log-empty">尚無碼位記錄<br>雙擊字元格可加入記錄<br>右鍵單擊字元格可移除</div>';
+    return;
+  }
+  const searchEl = document.getElementById('log-search');
+  const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  const all = [...S.log].sort();
+  const filtered = q ? all.filter(key => {
+    const hex = key.slice(3).toLowerCase();
+    const ch = String.fromCodePoint(parseInt(hex, 16)).toLowerCase();
+    return key.toLowerCase().includes(q) || hex.includes(q) || ch === q;
+  }) : all;
+  if (!filtered.length) { list.innerHTML = '<div class="log-empty">無符合結果</div>'; return; }
+  list.innerHTML = '';
+  filtered.forEach(key => {
+    const el = document.createElement('div'); el.className = 'log-item';
+    const cp = parseInt(key.slice(3), 16);
+    const ch = cp <= 0x10FFFF ? String.fromCodePoint(cp) : '';
+    el.innerHTML = '<span style="display:flex;align-items:center;gap:7px">'
+      + '<span style="font-size:14px;color:var(--text);min-width:16px;text-align:center">' + ch + '</span>'
+      + '<span>' + key + '</span></span>'
+      + '<button class="log-rem" onclick="removeLog(\'' + key + '\')">&#xD7;</button>';
+    list.appendChild(el);
+  });
+}
+
+
+function refreshLogHighlights() {
+  document.querySelectorAll('.gc').forEach(cell => {
+    const lbl = cell.querySelector('.glabel'); if (!lbl) return;
+    const inLog = S.log.has(lbl.textContent.trim());
+    cell.classList.toggle('in-log', inLog);
+    cell.classList.toggle('hl-on', inLog && S.showLogHL);
+  });
+}
+
+function exportLog() {
+  if (!S.log.size) { toast('記錄為空'); return }
+  const date = new Date().toISOString().slice(0, 10);
+  const sorted = [...S.log].sort();
+  // Format A — .enc: FontLab header + uniXXXX per line
+  const header = '%%FONTLAB ENCODING: -1; ' + date + '\n%%GROUP:FontQA\n';
+  dlFile('font-qa-issues.enc', header + sorted.join('\n'), 'text/plain');
+  // Format C — .txt: plain character string, no newlines
+  const plainChars = sorted.map(key => String.fromCodePoint(parseInt(key.slice(3), 16))).join('');
+  dlFile('font-qa-issues.txt', plainChars, 'text/plain');
+  toast('已匯出 .enc + .txt');
+}
+
+// ═══════════════════════════════════════
+// PDF EXPORT
+// ═══════════════════════════════════════
+function openPdfModal() {
+  const af = S.fonts.filter(f => f.enabled);
+  document.getElementById('pdf-info').innerHTML =
+    'Fonts: ' + af.length + ' | Glyphs: ' + S.charset.length
+    + '<br>Size: ' + S.size + 'px | Charset: ' + S.charsetName
+    + '<br>Border: ' + (S.showBorder ? 'ON' : 'OFF');
+  document.getElementById('pdf-modal').classList.add('show');
+}
+function closePdfModal() { document.getElementById('pdf-modal').classList.remove('show') }
+
+async function exportPDF() {
+  const af = S.fonts.filter(f => f.enabled);
+  if (!af.length) { toast('沒有啟用的字型'); return }
+  if (!S.charset.length) { toast('字元集為空'); return }
+  closePdfModal(); toast('產生 PDF 中...');
+  await new Promise(r => setTimeout(r, 50));
+
+  const { jsPDF } = window.jspdf;
+  const layout = document.getElementById('pdf-layout').value;
+  const doc    = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const PW = 595, PH = 842, M = 36, CW = PW - M * 2;
+  const SCALE = 4;
+
+  // Title block
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(24, 24, 27);
+  doc.text('Font Codebook', M, M + 16);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(113, 113, 122);
+  const ds = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  doc.text('Charset: ' + S.charsetName + '  |  Size: ' + S.size + 'px  |  ' + ds, M, M + 28);
+  let ty = M + 40;
+  af.forEach((f, i) => {
+    const rgb = hexRgb(f.color); doc.setTextColor(rgb.r, rgb.g, rgb.b);
+    doc.setFontSize(7.5); doc.setFont('helvetica', 'bold');
+    const safeName = f.name.replace(/[^\x20-\x7E]/g, '?');
+    doc.text((i+1) + '. ' + safeName, M + (i%2) * (CW/2), ty + Math.floor(i/2) * 11);
+  });
+  const hdrH = ty + Math.ceil(af.length/2) * 11 - M + 8;
+  doc.setDrawColor(228, 228, 231); doc.line(M, M + hdrH, PW - M, M + hdrH);
+
+  const cellPx = Math.min(S.size, 72);
+  const mRef   = getMetrics(af[0].otFont, cellPx);
+  const cellH  = Math.max(Math.ceil(mRef.hhea_asc - mRef.hhea_desc) + 6, cellPx + 6);
+  const cellW  = cellPx + 16;
+  const labelH = 10;
+  const gapPx  = 3;
+  const startY = M + hdrH + 6;
+  const showBorder = S.showBorder; // follow current UI state
+
+  // Helper: draw cell border in PDF
+  function pdfCellBorder(x, y, w, h) {
+    if (!showBorder) return;
+    doc.setDrawColor(180, 180, 188); doc.setLineWidth(0.8);
+    doc.roundedRect(x, y, w, h, 1, 1, 'S');
+  }
+
+  if (layout === 'grid') {
+    let cx = M, cy = startY;
+    for (const cp of S.charset) {
+      if (cx + cellW > PW - M + 1) { cx = M; cy += cellH + labelH + gapPx }
+      if (cy + cellH + labelH > PH - M) { doc.addPage(); cx = M; cy = M }
+      const img = renderGlyphHR(cp, af[0], cellPx, '#18181B', cellW, cellH, SCALE);
+      pdfCellBorder(cx, cy, cellW, cellH);
+      doc.addImage(img, 'PNG', cx, cy, cellW, cellH, undefined, 'FAST');
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(150, 150, 158);
+      doc.text(toUni(cp), cx + cellW/2, cy + cellH + 7.5, { align: 'center' });
+      cx += cellW + gapPx;
+    }
+  } else {
+    // SxS PDF: glyph-interleaved, same as screen view
+    // Each "group" = all fonts for one glyph, side by side (1px gap between fonts)
+    const fontGap = 1;
+    const groupW  = af.length * cellW + (af.length - 1) * fontGap;
+    const groupsPerRow = Math.max(1, Math.floor((CW + gapPx) / (groupW + gapPx)));
+
+    // Draw font name headers — only on each page top
+    const drawSxSHeader = (y) => {
+      af.forEach((f, fi) => {
+        const rgb = hexRgb(f.color); doc.setTextColor(rgb.r, rgb.g, rgb.b);
+        doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+        doc.text((fi+1) + '. ' + f.name.replace(/[^ -~]/g,'?'), M + fi * (CW / af.length), y);
+      });
+    };
+    let cy = startY;
+
+    let gi = 0;
+    while (gi < S.charset.length) {
+      const rowCps = S.charset.slice(gi, gi + groupsPerRow);
+      if (cy + cellH + labelH > PH - M) {
+        doc.addPage(); cy = M;
+        drawSxSHeader(cy); cy += 12;
+      }
+      // Draw header on very first row
+      if (gi === 0) { drawSxSHeader(cy); cy += 12; }
+      rowCps.forEach((cp, ri) => {
+        const groupX = M + ri * (groupW + gapPx);
+        af.forEach((f, fi) => {
+          const cx = groupX + fi * (cellW + fontGap);
+          const img = renderGlyphHR(cp, f, cellPx, f.color, cellW, cellH, SCALE);
+          pdfCellBorder(cx, cy, cellW, cellH);
+          doc.addImage(img, 'PNG', cx, cy, cellW, cellH, undefined, 'FAST');
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(150, 150, 158);
+          doc.text(toUni(cp), cx + cellW/2, cy + cellH + 7.5, { align: 'center' });
+        });
+      });
+      cy += cellH + labelH + gapPx; gi += groupsPerRow;
+    }
+  }
+  doc.save('font-codebook.pdf'); toast('PDF 已匯出');
+}
+
+function renderGlyphHR(cp, font, px, color, w, h, scale) {
+  const oc = document.createElement('canvas'); oc.width = w*scale; oc.height = h*scale;
+  const ctx = oc.getContext('2d'); ctx.scale(scale, scale);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+  const m = getMetrics(font.otFont, px);
+  // Use unified baseline across all enabled fonts
+  const allFonts = S.fonts.filter(f => f.enabled);
+  let maxAsc = m.hhea_asc, maxDesc = m.hhea_desc;
+  allFonts.forEach(f => {
+    const fm = getMetrics(f.otFont, px);
+    if (fm.hhea_asc > maxAsc)   maxAsc  = fm.hhea_asc;
+    if (fm.hhea_desc < maxDesc) maxDesc = fm.hhea_desc;
+  });
+  const totalH   = maxAsc - maxDesc;
+  const baselineY = (h - totalH) / 2 + maxAsc;
+  const glyph    = font.otFont.charToGlyph(String.fromCodePoint(cp));
+  if (glyph && glyph.index !== 0) {
+    const adv = (glyph.advanceWidth || 0) * (px / font.otFont.unitsPerEm);
+    const ox  = Math.max(0, (w - adv) / 2);
+    ctx.fillStyle = color;
+    ctx.fill(new Path2D(glyph.getPath(ox, baselineY, px).toPathData(4)));
+  }
+  return oc.toDataURL('image/png');
+}
+
+function hexRgb(hex) {
+  return { r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16) };
+}
+
+// ═══════════════════════════════════════
+// PANEL TABS & STATUS
+// ═══════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.ptab').forEach((el, i) => el.classList.toggle('active', ['layout','color','log'][i] === tab));
+  document.querySelectorAll('.ptbody').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function updateStatus() {
+  const af = S.fonts.filter(f => f.enabled);
+  document.getElementById('sb-fonts').textContent  = af.length + ' 字型';
+  document.getElementById('sb-glyphs').textContent = S.charset.length + ' 字符';
+  document.getElementById('sb-log').textContent    = '記錄：' + S.log.size;
+}
+
+function dlFile(name, content, mime) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+
+let toastT;
+function toast(msg) {
+  const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ═══════════════════════════════════════
+// TOOLTIP
+// ═══════════════════════════════════════
+(function(){
+  const box = document.createElement('div');
+  box.id = 'tip-box';
+  document.body.appendChild(box);
+  let hideTimer;
+
+  document.querySelectorAll('[data-tip]').forEach(el => {
+    el.addEventListener('mouseenter', (e) => {
+      clearTimeout(hideTimer);
+      const rect = el.getBoundingClientRect();
+      box.textContent = el.dataset.tip;
+      box.classList.add('show');
+      // Position below element, centered
+      const bw = box.offsetWidth;
+      let left = rect.left + rect.width / 2 - bw / 2;
+      left = Math.max(4, Math.min(left, window.innerWidth - bw - 4));
+      box.style.left = left + 'px';
+      box.style.top  = (rect.bottom + 8) + 'px';
+      // Update arrow position
+      const arrowLeft = rect.left + rect.width / 2 - parseFloat(box.style.left);
+      box.style.setProperty('--arrow-left', arrowLeft + 'px');
+    });
+    el.addEventListener('mouseleave', () => {
+      hideTimer = setTimeout(() => box.classList.remove('show'), 80);
+    });
+  });
+})();
+
+// ═══════════════════════════════════════
+// GO TO GLYPH
+// ═══════════════════════════════════════
+function gotoGlyph(raw, jump) {
+  const q = raw.trim();
+  const statusEl = document.getElementById('goto-status');
+  if (!q) { statusEl.textContent = ''; clearGotoHighlight(); return; }
+
+  // Parse codepoint from input
+  let cp = null;
+  if (/^uni([0-9A-Fa-f]{4,6})$/i.test(q)) {
+    cp = parseInt(q.slice(3), 16);
+  } else if (/^[0-9A-Fa-f]{4,6}$/.test(q)) {
+    cp = parseInt(q, 16);
+  } else if ([...q].length === 1) {
+    cp = q.codePointAt(0);
+  }
+
+  if (cp === null) { statusEl.textContent = '?'; clearGotoHighlight(); return; }
+
+  // Check if codepoint is in current charset
+  const idx = S.charset.indexOf(cp);
+  if (idx === -1) {
+    statusEl.textContent = '未收錄';
+    statusEl.style.color = 'var(--danger)';
+    clearGotoHighlight();
+    return;
+  }
+
+  statusEl.textContent = toUni(cp);
+  statusEl.style.color = 'var(--accent)';
+
+  // Highlight all matching cells
+  clearGotoHighlight();
+  const uniKey = toUni(cp);
+  let target = null;
+  document.querySelectorAll('.glabel').forEach(lbl => {
+    if (lbl.textContent.trim() === uniKey) {
+      const cell = lbl.closest('.gc');
+      if (cell) {
+        cell.classList.add('goto-hl');
+        if (!target) target = cell;
+      }
+    }
+  });
+
+  // Scroll to first match
+  if (target && jump !== false) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function clearGotoHighlight() {
+  document.querySelectorAll('.gc.goto-hl').forEach(el => el.classList.remove('goto-hl'));
+}
+
+// 一鍵清除：移除所有字型並清空記錄（保留目前字元集）
+function clearAll() {
+  if (!confirm('確認要移除所有已載入的字型並清除記錄嗎？此操作無法復原。')) return;
+  S.fonts = [];
+  S.log.clear();
+  // Update UI
+  renderFontList();
+  renderColorList();
+  renderGlyphs();
+  updateStatus();
+  toast('已清除所有字型與記錄');
+}
+
+// 已移除第二組 tooltip 腳本，以避免與主 tooltip 重複顯示
+
+// INIT
+// initCharset() removed — user selects charset manually
+S.charsetName = ''; updateCsLabel();
+initMetricsUI(); renderColorList(); updateStatus();
+// 側邊下拉預設顯示「選擇字元集」，不自動套用任何字元集
+</script>
+</body>
+</html>

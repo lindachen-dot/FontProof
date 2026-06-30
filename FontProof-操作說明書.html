@@ -218,13 +218,14 @@ pre{background:#1E1E2E;color:#CDD6F4;border-radius:var(--radius);padding:12px 14
   <div class="cover" id="cover">
     <div class="cover-logo">FontProof</div>
     <div class="cover-title">操作說明書</div>
-    <div class="cover-sub">字型檢視與校對工具 · 使用說明 · v1.0 · 2026</div>
+    <div class="cover-sub">字型檢視與校對工具 · 使用說明 · v1.1 · 2026</div>
     <div class="cover-tags">
       <span class="cover-tag">格狀 / 並排 / 疊加</span>
       <span class="cover-tag">Metrics 疊加</span>
       <span class="cover-tag">碼位記錄匯出</span>
       <span class="cover-tag">Codebook PDF</span>
       <span class="cover-tag">TTF · OTF · TTC</span>
+      <span class="cover-tag">可變字型 Instances</span>
     </div>
   </div>
 
@@ -266,7 +267,7 @@ pre{background:#1E1E2E;color:#CDD6F4;border-radius:var(--radius);padding:12px 14
           </div>
           <div style="margin-top:10px">
             <div class="mock-sth">Metrics 疊加</div>
-            <div style="font-size:9px;color:var(--text-2);line-height:2.1">☑ Baseline<br>☐ hhea Ascent<br>☐ Typo Ascender<br>☐ x-height</div>
+            <div style="font-size:9px;color:var(--text-2);line-height:2.1">☑ Baseline<br>☐ hhea Ascent<br>☐ Typo Ascender<br>☐ x-height<br>☐ LSB / RSB</div>
           </div>
         </div>
         <div class="mock-center">
@@ -356,6 +357,25 @@ pre{background:#1E1E2E;color:#CDD6F4;border-radius:var(--radius);padding:12px 14
           </div>
         </div>
         <div class="tip"><strong>提示：</strong>停用的字型（切換鍵呈灰色）不顯示於檢視區，但顏色和記錄設定仍保留。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">可變字型（Variable Font）自動偵測</div>
+        <div class="step-desc">載入含 <code style="font-family:var(--mono);font-size:11px;background:var(--bg-panel);padding:1px 5px;border-radius:4px">fvar</code> 表的可變字型時，會自動跳出「Variable Font Instances」視窗，列出該字型的所有座標軸（如 Weight、Width）與可選的 Instance。</div>
+        <div class="mockup" style="margin-top:10px">
+          <div style="padding:14px;background:#fff">
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px">Variable Font Instances</div>
+            <div style="font-size:10px;color:var(--text-3);margin-bottom:8px">Axes: Weight / wght (100–900) · Width / wdth (75–125)</div>
+            <div style="font-size:11px;font-weight:500;color:var(--text-2);margin-bottom:6px">選擇要載入的 Instances：</div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:11px"><span style="width:13px;height:13px;border:1.5px solid var(--accent);border-radius:3px;background:var(--accent);flex-shrink:0"></span><span style="flex:1;font-weight:500">Regular</span><span style="color:var(--text-3);font-family:var(--mono);font-size:9px">wght=400, wdth=100</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:11px"><span style="width:13px;height:13px;border:1.5px solid var(--accent);border-radius:3px;background:var(--accent);flex-shrink:0"></span><span style="flex:1;font-weight:500">Bold</span><span style="color:var(--text-3);font-family:var(--mono);font-size:9px">wght=700, wdth=100</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="step-desc" style="margin-top:8px">勾選需要的 Instance 後按「載入選取」，每個勾選的 Instance 會以獨立字型項目加入列表（名稱會自動加上 Instance 名稱，如「HFFont Bold」），可分別開啟、停用或設定顏色，與一般字型無異。「全選」「全不選」可快速切換勾選狀態，未勾選任一項時無法載入。</div>
       </div>
     </div>
   </section>
@@ -517,6 +537,8 @@ abcdefghijklmnopqrstuvwxyz
       <div class="mline" style="top:52%;border-top-color:#F59E0B;border-top-style:dashed;opacity:.8"></div>
       <div class="mline" style="top:68%;border-top-color:#3B82F6;border-top-style:solid;border-top-width:1.5px;opacity:.5"></div>
       <div class="mline" style="top:82%;border-top-color:#10B981;border-top-style:dashed;opacity:.8"></div>
+      <div class="mline" style="left:28%;right:auto;top:0;bottom:0;width:0;height:auto;border-left:1.5px dashed #6B7280;border-top:none;opacity:.8"></div>
+      <div class="mline" style="left:auto;right:24%;top:0;bottom:0;width:0;height:auto;border-left:1.5px dashed #6B7280;border-top:none;opacity:.8"></div>
     </div>
     <div class="metric-legend">
       <div class="ml-item"><div class="ml-swatch" style="height:2px;background:#3B82F6;-webkit-print-color-adjust:exact;print-color-adjust:exact"></div>Baseline</div>
@@ -526,6 +548,15 @@ abcdefghijklmnopqrstuvwxyz
       <div class="ml-item"><div class="ml-swatch" style="height:0;border-top:2px dashed #10B981"></div>Typo Descender</div>
       <div class="ml-item"><div class="ml-swatch" style="height:0;border-top:2px dashed #F59E0B"></div>x-height</div>
       <div class="ml-item"><div class="ml-swatch" style="height:0;border-top:2px dashed #EF4444"></div>Cap Height</div>
+      <div class="ml-item"><div class="ml-swatch" style="height:0;border-top:2px dashed #6B7280"></div>LSB / RSB</div>
+    </div>
+    <div class="info-box" style="margin-top:4px">
+      <div class="info-box-title">LSB / RSB（左右側邊距）</div>
+      <ul>
+        <li>LSB：字符原點到輪廓最左緣的距離</li>
+        <li>RSB：輪廓最右緣到下一字符原點（advance width 終點）的距離</li>
+        <li>以兩條灰色虛線標示每個字符格內的字符前進寬度邊界，方便檢查字距是否過寬或過窄</li>
+      </ul>
     </div>
     <div class="tip" style="margin-top:12px"><strong>注意：</strong>載入多套字型時，所有字型共用統一的 Baseline 位置（取所有字型 hhea 最大值），確保 Metrics 線不超出格子範圍。</div>
   </section>

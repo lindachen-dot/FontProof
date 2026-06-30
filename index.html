@@ -131,7 +131,7 @@ body{font-family:system-ui,-apple-system,'PingFang TC','Noto Sans TC',sans-serif
 .chex{font-family:var(--mono);font-size:10px;color:var(--text-3)}
 
 /* COLOR POPOVER */
-#cpop{position:fixed;z-index:9000;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px;box-shadow:var(--shadow-lg);display:none;flex-direction:column;gap:8px;width:204px}
+#cpop{position:fixed;z-index:9000;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px;box-shadow:var(--shadow-lg);display:none;flex-direction:column;gap:8px;width:220px}
 #cpop.show{display:flex}
 .cpre{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:2px}
 .cpsw{width:22px;height:22px;border-radius:4px;border:1.5px solid rgba(0,0,0,.12);cursor:pointer;transition:transform .1s}
@@ -240,6 +240,10 @@ body{font-family:system-ui,-apple-system,'PingFang TC','Noto Sans TC',sans-serif
 PDF 匯出同步此設定" >
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/></svg>框格
   </button>
+  <!-- LABEL TOGGLE -->
+  <button class="btn active" id="btn-label" onclick="toggleLabel()" data-tip="Unicode 標示開關">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="10" width="14" height="4" rx="1"/><path d="M4 10V6M8 10V4M12 10V7"/></svg>碼位標示
+  </button>
   <!-- LOG HIGHLIGHT TOGGLE -->
   <button class="btn active" id="btn-hl" onclick="toggleLogHL()" data-tip="碼位記錄標示
 已記錄字符顯示紅框" >
@@ -304,7 +308,7 @@ PDF 匯出同步此設定" >
           <span id="cs-label" style="font-family:var(--mono);font-size:10px;color:var(--text-3)"></span>
         </div>
         <div style="padding:8px">
-          <select class="msel" id="cs-type-sidebar" onchange="onCsSidebarChange()"><option value="">選擇字元集</option>
+          <select class="msel" id="cs-type-sidebar" onchange="onCsSidebarChange()"><option value="font-glyphs">字型字符（自動）</option>
             <optgroup label="基本">
               <option value="ascii">ASCII (U+0020–U+007E)</option>
             </optgroup>
@@ -424,12 +428,16 @@ PDF 匯出同步此設定" >
 
 <!-- COLOR POPOVER -->
 <div id="cpop">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    <span style="font-size:11px;font-weight:500;color:var(--text-2)">選擇顏色</span>
+    <button onclick="closeColorPick();event.stopPropagation()" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-3);line-height:1;padding:0 2px">&times;</button>
+  </div>
   <div class="cpre" id="cpre"></div>
   <div class="cp-row">
     <input type="color" id="cp-native">
     <input type="text" id="cp-hex" maxlength="7" placeholder="#6366F1">
-    <button class="btn btn-primary" style="padding:4px 8px;font-size:11px" onclick="applyColorPick()">套用</button>
   </div>
+  <button class="btn btn-primary" style="width:100%;font-size:12px" onclick="applyColorPick();event.stopPropagation()">套用</button>
 </div>
 
 <!-- CHARSET MODAL -->
@@ -464,6 +472,38 @@ PDF 匯出同步此設定" >
 
 <div id="toast"></div>
 
+<!-- PASTE TEXT MODAL -->
+<div class="moverlay" id="paste-modal">
+  <div class="modal" style="min-width:380px">
+    <h3>貼上文字</h3>
+    <div style="font-size:12px;color:var(--text-3);margin-bottom:10px">貼入任意文字，將提取其中的字符作為字元集</div>
+    <textarea id="paste-input" style="width:100%;height:120px;border:1px solid var(--border);border-radius:var(--radius);padding:8px;font-size:13px;background:var(--bg);color:var(--text);resize:vertical;outline:none;box-sizing:border-box" placeholder="在此貼上文字…"></textarea>
+    <div style="font-size:11px;color:var(--text-3);margin-top:6px" id="paste-count"></div>
+    <div class="mbtns">
+      <button class="btn" onclick="closePasteModal()">取消</button>
+      <button class="btn btn-primary" onclick="applyPasteText()">套用</button>
+    </div>
+  </div>
+</div>
+
+<!-- VARIABLE FONT INSTANCE PICKER -->
+<div class="moverlay" id="vf-modal">
+  <div class="modal" style="min-width:420px;max-width:520px">
+    <h3 id="vf-title">Variable Font Instances</h3>
+    <div style="font-size:12px;color:var(--text-3);margin-bottom:12px" id="vf-axes"></div>
+    <div style="font-size:12px;font-weight:500;color:var(--text-2);margin-bottom:8px">選擇要載入的 Instances：</div>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button class="btn" style="font-size:11px" onclick="vfSelectAll(true)">全選</button>
+      <button class="btn" style="font-size:11px" onclick="vfSelectAll(false)">全不選</button>
+    </div>
+    <div id="vf-list" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-bottom:14px"></div>
+    <div class="mbtns">
+      <button class="btn" onclick="closeVFModal()">取消</button>
+      <button class="btn btn-primary" onclick="applyVFInstances()">載入選取</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
 // ═══════════════════════════════════════
@@ -474,10 +514,12 @@ const PRESET_COLORS = ['#6366F1','#EF4444','#10B981','#F59E0B','#3B82F6','#EC489
 const S = {
   fonts: [],
   charset: [], charsetName: 'ASCII',
+  glyphNames: [],   // shared names for non-Unicode entries (matched across fonts)
   view: 'grid',
   size: 72, spacing: 4, lineSpacing: 8, cols: 16,
   overlayOpacity: 0.5,
   showBorder: true,      // cell border on/off
+  showLabel: true,       // unicode label on/off
   showLogHL: true,       // issue log red highlight on/off
   metrics: {
     baseline:      {label:'Baseline',       color:'#3B82F6', on:true},
@@ -487,6 +529,7 @@ const S = {
     typoDescender: {label:'Typo Descender', color:'#10B981', on:false},
     xHeight:       {label:'x-height',       color:'#F59E0B', on:false},
     capHeight:     {label:'Cap Height',     color:'#EF4444', on:false},
+    sidebearing:   {label:'LSB / RSB',       color:'#6B7280', on:false},
   },
   log: new Set(),
 };
@@ -522,22 +565,45 @@ async function loadFontFiles(files) {
     if (!['ttf','otf','ttc'].includes(ext)) { toast('不支援：' + file.name); continue }
     try {
       const buf = await file.arrayBuffer();
+      // Pre-register @font-face for all fonts (needed for CBDT/sbix before opentype parse)
+      const blobUrl = URL.createObjectURL(new Blob([buf], {type:'font/ttf'}));
+      const tempId = 'fp_pre_' + Date.now().toString(36);
+      const preStyle = document.createElement('style');
+      preStyle.textContent = `@font-face { font-family: "${tempId}"; src: url("${blobUrl}"); }`;
+      document.head.appendChild(preStyle);
       if (ext === 'ttc') {
         const dv  = new DataView(buf);
         const tag = String.fromCharCode(dv.getUint8(0),dv.getUint8(1),dv.getUint8(2),dv.getUint8(3));
         if (tag === 'ttcf') {
           const n = dv.getUint32(8);
           for (let i = 0; i < n; i++) {
-            try { addFont(file.name, '[' + (i+1) + ']', opentype.parse(buf, {offset: dv.getUint32(12+i*4)})) }
+            try { addFont(file.name, '[' + (i+1) + ']', opentype.parse(buf, {offset: dv.getUint32(12+i*4)}), buf) }
             catch(e2) { toast('TTC subfont ' + (i+1) + ' failed') }
           }
-        } else { addFont(file.name, '', opentype.parse(buf)) }
+        } else {
+          try { addFont(file.name, '', opentype.parse(buf), buf); }
+          catch(e2) { addBitmapFont(file.name, '', buf); }
+        }
       } else {
-        addFont(file.name, '', opentype.parse(buf));
+        try {
+          const otf = opentype.parse(buf);
+          // Check for variable font (fvar table)
+          if (otf.tables && otf.tables['fvar'] && otf.tables['fvar'].axes && otf.tables['fvar'].axes.length) {
+            pendingVFFile = { name: file.name, buf, otf };
+            openVFModal(file.name, otf, buf);
+          } else {
+            addFont(file.name, '', otf, buf);
+          }
+        }
+        catch(e2) { addBitmapFont(file.name, '', buf); }
       }
-    } catch(err) { toast('載入失敗：' + file.name) }
+    } catch(err) { console.error('FontProof載入失敗:', file.name, err); toast('載入失敗：' + file.name + ' — ' + (err.message||err)) }
   }
   renderFontList(); renderGlyphs(); updateStatus();
+  // Always auto-apply font glyphs when a font is loaded
+  const sel = document.getElementById('cs-type-sidebar');
+  if (sel) sel.value = 'font-glyphs';
+  applyFontGlyphs();
 }
 
 function getFontName(otf, fb) {
@@ -548,14 +614,525 @@ function getFontName(otf, fb) {
   } catch(e) { return fb }
 }
 
-function addFont(fileName, sub, otFont) {
+function addFont(fileName, sub, otFont, rawBuf) {
   const id    = Date.now() + Math.random();
   const name  = getFontName(otFont, fileName + (sub ? ' ' + sub : ''));
   const color = PRESET_COLORS[S.fonts.length % PRESET_COLORS.length];
-  S.fonts.push({ id, name, otFont, color, enabled: true });
+  // Detect color font type by reading table directory from rawBuf directly
+  let colorType = null;
+  if (rawBuf) {
+    const _dv = new DataView(rawBuf);
+    const _n = _dv.getUint16(4);
+    const _tags = new Set();
+    for (let _i = 0; _i < _n; _i++) {
+      const _tag = String.fromCharCode(
+        _dv.getUint8(12+_i*16), _dv.getUint8(13+_i*16),
+        _dv.getUint8(14+_i*16), _dv.getUint8(15+_i*16)
+      ).trim();
+      const _len = _dv.getUint32(24+_i*16);
+      if (_len > 0) _tags.add(_tag);
+    }
+    if (_tags.has('SVG'))        colorType = 'svg';
+    else if (_tags.has('COLR') && _tags.has('CPAL')) colorType = 'colr';
+    else if (_tags.has('CBDT') && _tags.has('CBLC')) colorType = 'cbdt';
+    else if (_tags.has('sbix')) colorType = 'sbix';
+  }
+  // Parse bitmap/vector color data
+  let cbdtMap = null, sbixMap = null, svgMap = null;
+  if (rawBuf) {
+    const dv = new DataView(rawBuf);
+    if (colorType === 'cbdt') {
+      try { cbdtMap = parseCBDTFromFontBuf(dv, otFont); } catch(e) { console.warn('CBDT:', e); }
+    } else if (colorType === 'sbix') {
+      try { sbixMap = parseSbixFromFontBuf(dv, otFont); } catch(e) { console.warn('sbix:', e); }
+    } else if (colorType === 'svg') {
+      try { svgMap = parseSVGFromFontBuf(dv, otFont); } catch(e) { console.warn('SVG:', e); }
+    } else if (colorType === 'colr') {
+      if (!hasCPALData(dv)) { colorType = null; } // no real color data
+    }
+  }
+  let colrData = null;
+  if (colorType === 'colr' && rawBuf) {
+    try { colrData = parseCOLRFromFontBuf(new DataView(rawBuf)); } catch(e) { console.warn('COLR:', e); }
+    if (!colrData) colorType = null; // fallback to outline
+  }
+  S.fonts.push({ id, name, otFont, rawBuf, color, enabled: true, colorType, cbdtMap, sbixMap, svgMap, colrData });
+}
+
+// Bitmap-only font (CBDT/sbix) that opentype.js cannot parse
+function addBitmapFont(fileName, sub, rawBuf) {
+  const dv = new DataView(rawBuf);
+  // Read font name from name table
+  let fontName = fileName + (sub ? ' ' + sub : '');
+  try { fontName = readNameFromBuf(dv) || fontName; } catch(e) {}
+
+  // Detect color type from table tags
+  let colorType = null;
+  const numTables = dv.getUint16(4);
+  const tags = [];
+  for (let i = 0; i < numTables; i++) {
+    const tag = String.fromCharCode(dv.getUint8(12+i*16), dv.getUint8(13+i*16), dv.getUint8(14+i*16), dv.getUint8(15+i*16));
+    tags.push(tag.trim());
+  }
+  if (tags.includes('CBDT') && tags.includes('CBLC')) colorType = 'cbdt';
+  else if (tags.includes('sbix')) colorType = 'sbix';
+  else if (tags.includes('SVG')) colorType = 'svg';
+  else { toast('不支援的字型格式：' + fileName); return; }
+
+  // Use filename as display name (consistent with other font types)
+  fontName = fileName + (sub ? ' ' + sub : '');
+  // Build a minimal fake otFont object with just enough for getCellDims / getMetrics
+  const otFont = buildFakeOtFont(dv, numTables, rawBuf);
+
+  const id    = Date.now() + Math.random();
+  const color = PRESET_COLORS[S.fonts.length % PRESET_COLORS.length];
+
+  // Parse color data
+  let cbdtMap = null, sbixMap = null, svgMap = null;
+  if (colorType === 'cbdt') {
+    try { cbdtMap = parseCBDTFromFontBuf(dv, otFont); } catch(e) { console.warn('CBDT parse:', e); }
+  } else if (colorType === 'sbix') {
+    try { sbixMap = parseSbixFromFontBuf(dv, otFont); } catch(e) { console.warn('sbix parse:', e); }
+  } else if (colorType === 'svg') {
+    try { svgMap = parseSVGFromFontBuf(dv, otFont); } catch(e) { console.warn('SVG parse:', e); }
+  }
+
+  // Register @font-face (for sbix, fillText works via browser)
+  if (colorType === 'sbix') {
+    const blob = new Blob([rawBuf], {type:'font/ttf'});
+    const url  = URL.createObjectURL(blob);
+    const fid  = 'fp_' + id.toString().replace('.','_');
+    const style = document.createElement('style');
+    style.textContent = `@font-face { font-family: "${fid}"; src: url("${url}"); }`;
+    document.head.appendChild(style);
+    otFont._cssFontFamily = '"' + fid + '"';
+  }
+
+  S.fonts.push({ id, name: fontName, otFont, rawBuf, color, enabled: true, colorType, cbdtMap, sbixMap, svgMap, colrData: null });
+  toast('已載入（點陣圖模式）：' + fontName);
+}
+
+function readNameFromBuf(dv) {
+  const numTables = dv.getUint16(4);
+  for (let i = 0; i < numTables; i++) {
+    const tag = String.fromCharCode(dv.getUint8(12+i*16), dv.getUint8(13+i*16), dv.getUint8(14+i*16), dv.getUint8(15+i*16));
+    if (tag === 'name') {
+      const off = dv.getUint32(20+i*16);
+      const count = dv.getUint16(off + 2);
+      const strOff = dv.getUint16(off + 4);
+      for (let r = 0; r < count; r++) {
+        const rOff = off + 6 + r * 12;
+        const nameId = dv.getUint16(rOff + 6);
+        if (nameId !== 4) continue; // Full name
+        const len = dv.getUint16(rOff + 8);
+        const strStart = off + strOff + dv.getUint16(rOff + 10);
+        const platId = dv.getUint16(rOff);
+        // Platform 3 (Windows) = UTF-16BE
+        if (platId === 3) {
+          let s = '';
+          for (let c = 0; c < len; c += 2) s += String.fromCharCode(dv.getUint16(strStart + c));
+          return s;
+        }
+        // Platform 1 (Mac) = Latin-1
+        if (platId === 1) {
+          let s = '';
+          for (let c = 0; c < len; c++) s += String.fromCharCode(dv.getUint8(strStart + c));
+          return s;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function buildFakeOtFont(dv, numTables, rawBuf) {
+  // Build minimal otFont-like object for CBDT/sbix fonts
+  // Read hhea/OS2 metrics from binary
+  let unitsPerEm = 1000, ascender = 800, descender = -200;
+  let sTypoAscender = 800, sTypoDescender = -200, sxHeight = 500, sCapHeight = 700;
+
+  for (let i = 0; i < numTables; i++) {
+    const tag = String.fromCharCode(dv.getUint8(12+i*16), dv.getUint8(13+i*16), dv.getUint8(14+i*16), dv.getUint8(15+i*16));
+    const off = dv.getUint32(20+i*16);
+    if (tag === 'head') {
+      unitsPerEm = dv.getUint16(off + 18);
+    }
+    if (tag === 'hhea') {
+      ascender  = dv.getInt16(off + 4);
+      descender = dv.getInt16(off + 6);
+    }
+    if (tag === 'OS/2') {
+      sTypoAscender  = dv.getInt16(off + 68);
+      sTypoDescender = dv.getInt16(off + 70);
+      sxHeight       = dv.getInt16(off + 86);
+      sCapHeight     = dv.getInt16(off + 88);
+    }
+  }
+
+  // Build glyph order from cmap
+  const glyphOrder = buildGlyphOrderFromCmap(dv, numTables);
+
+  // Read hmtx for advance widths
+  const hmtxMap = {};
+  for (let i = 0; i < numTables; i++) {
+    const tag = String.fromCharCode(dv.getUint8(12+i*16),dv.getUint8(13+i*16),dv.getUint8(14+i*16),dv.getUint8(15+i*16)).trim();
+    if (tag === 'hmtx') {
+      const hmtxOff = dv.getUint32(20+i*16);
+      // numberOfHMetrics from hhea table
+      const numHMetrics = Math.min(Object.keys(glyphOrder).length + 5, 500);
+      for (let g = 0; g < numHMetrics; g++) {
+        try {
+          const adv = dv.getUint16(hmtxOff + g * 4);
+          hmtxMap[g] = adv;
+        } catch(e) { break; }
+      }
+      break;
+    }
+  }
+  const defaultAdv = unitsPerEm * 0.6;
+
+  return {
+    unitsPerEm,
+    tables: {
+      hhea: { ascender, descender },
+      os2:  { sTypoAscender, sTypoDescender, sxHeight, sCapHeight },
+    },
+    charToGlyph(char) {
+      const cp = char.codePointAt(0);
+      const idx = glyphOrder[cp] || 0;
+      const adv = hmtxMap[idx] !== undefined ? hmtxMap[idx] : defaultAdv;
+      return { index: idx, advanceWidth: adv };
+    },
+    getGlyphOrder() { return Object.values(glyphOrder); }
+  };
+}
+
+function buildGlyphOrderFromCmap(dv, numTables) {
+  // Returns { codepoint: glyphId }
+  const map = {};
+  for (let i = 0; i < numTables; i++) {
+    const tag = String.fromCharCode(dv.getUint8(12+i*16), dv.getUint8(13+i*16), dv.getUint8(14+i*16), dv.getUint8(15+i*16));
+    if (tag !== 'cmap') continue;
+    const off = dv.getUint32(20+i*16);
+    const numSubtables = dv.getUint16(off + 2);
+    for (let s = 0; s < numSubtables; s++) {
+      const platId  = dv.getUint16(off + 4 + s*8);
+      const encId   = dv.getUint16(off + 6 + s*8);
+      const subOff  = off + dv.getUint32(off + 8 + s*8);
+      const fmt     = dv.getUint16(subOff);
+      if (fmt === 4) {
+        // Format 4
+        const segCount = dv.getUint16(subOff + 6) / 2;
+        const endCodes = [], startCodes = [], idDeltas = [], idRangeOffsets = [];
+        for (let k = 0; k < segCount; k++) {
+          endCodes.push(dv.getUint16(subOff + 14 + k*2));
+          startCodes.push(dv.getUint16(subOff + 16 + segCount*2 + k*2));
+          idDeltas.push(dv.getInt16(subOff + 16 + segCount*4 + k*2));
+          idRangeOffsets.push(dv.getUint16(subOff + 16 + segCount*6 + k*2));
+        }
+        const glyphIdBase = subOff + 16 + segCount*6;
+        for (let k = 0; k < segCount - 1; k++) {
+          for (let cp = startCodes[k]; cp <= endCodes[k]; cp++) {
+            let glyphId;
+            if (idRangeOffsets[k] === 0) {
+              glyphId = (cp + idDeltas[k]) & 0xFFFF;
+            } else {
+              const idx = glyphIdBase + k*2 + idRangeOffsets[k] + (cp - startCodes[k]) * 2;
+              glyphId = dv.getUint16(idx);
+              if (glyphId !== 0) glyphId = (glyphId + idDeltas[k]) & 0xFFFF;
+            }
+            if (glyphId > 0) map[cp] = glyphId;
+          }
+        }
+        return map; // use first format 4 cmap found
+      }
+      if (fmt === 12) {
+        // Format 12
+        const nGroups = dv.getUint32(subOff + 12);
+        for (let g = 0; g < nGroups; g++) {
+          const startChar  = dv.getUint32(subOff + 16 + g*12);
+          const endChar    = dv.getUint32(subOff + 20 + g*12);
+          const startGlyph = dv.getUint32(subOff + 24 + g*12);
+          for (let cp = startChar; cp <= endChar; cp++) {
+            map[cp] = startGlyph + (cp - startChar);
+          }
+        }
+        return map;
+      }
+    }
+  }
+  return map;
+}
+
+// ═══════════════════════════════════════
+// sbix PARSER — extracts PNG per glyph with yMax from glyf
+// ═══════════════════════════════════════
+function parseSbixFromFontBuf(dv, otFont) {
+  const numTables = dv.getUint16(4);
+  let sbixOff = 0, maxpOff = 0, locaOff = 0, glyffOff = 0, headOff = 0;
+  let locaLen = 0;
+  for (let i = 0; i < numTables; i++) {
+    const tag = String.fromCharCode(dv.getUint8(12+i*16),dv.getUint8(13+i*16),dv.getUint8(14+i*16),dv.getUint8(15+i*16)).trim();
+    const off = dv.getUint32(20+i*16);
+    const len = dv.getUint32(24+i*16);
+    if (tag === 'sbix')  sbixOff  = off;
+    if (tag === 'maxp')  maxpOff  = off;
+    if (tag === 'loca')  { locaOff = off; locaLen = len; }
+    if (tag === 'glyf')  glyffOff = off;
+    if (tag === 'head')  headOff  = off;
+  }
+  if (!sbixOff) return null;
+  const numGlyphs = dv.getUint16(maxpOff + 4);
+  const indexToLocFormat = dv.getInt16(headOff + 50); // 0=short, 1=long
+
+  // Build glyphId → yMax map from loca+glyf
+  const yMaxMap = {};
+  if (locaOff && glyffOff) {
+    for (let gi = 0; gi < numGlyphs; gi++) {
+      let glyfOff;
+      if (indexToLocFormat === 0) {
+        glyfOff = dv.getUint16(locaOff + gi*2) * 2;
+      } else {
+        glyfOff = dv.getUint32(locaOff + gi*4);
+      }
+      const abs = glyffOff + glyfOff;
+      if (abs + 10 <= dv.byteLength) {
+        // glyf header: numberOfContours(2s) xMin(2s) yMin(2s) xMax(2s) yMax(2s)
+        yMaxMap[gi] = dv.getInt16(abs + 8); // yMax
+      }
+    }
+  }
+
+  const numStrikes = dv.getUint32(sbixOff + 4);
+  if (!numStrikes) return null;
+  const strike0 = sbixOff + dv.getUint32(sbixOff + 8);
+  const ppem = dv.getUint16(strike0);
+  const result = {};
+  result._ppem = ppem;
+  result._upm  = otFont.unitsPerEm;
+  for (let gi = 0; gi < numGlyphs; gi++) {
+    const start = dv.getUint32(strike0 + 4 + gi * 4);
+    const end   = dv.getUint32(strike0 + 4 + (gi+1) * 4);
+    if (start === end) continue;
+    const originY = dv.getInt16(strike0 + start + 2);
+    const type = String.fromCharCode(
+      dv.getUint8(strike0+start+4), dv.getUint8(strike0+start+5),
+      dv.getUint8(strike0+start+6), dv.getUint8(strike0+start+7)
+    ).trim();
+    if (type !== 'png') continue;
+    const pngData = new Uint8Array(dv.buffer, dv.byteOffset + strike0 + start + 8, end - start - 8);
+    result[gi] = { png: pngData, originY, yMax: yMaxMap[gi] || null };
+  }
+  return result;
+}
+
+// ═══════════════════════════════════════
+// SVG PARSER — extracts SVG string per glyph
+// ═══════════════════════════════════════
+function parseSVGFromFontBuf(dv, otFont) {
+  const numTables = dv.getUint16(4);
+  let svgOff = 0;
+  for (let i = 0; i < numTables; i++) {
+    const tag = String.fromCharCode(dv.getUint8(12+i*16),dv.getUint8(13+i*16),dv.getUint8(14+i*16),dv.getUint8(15+i*16)).trim();
+    if (tag === 'SVG') svgOff = dv.getUint32(20+i*16);
+  }
+  if (!svgOff) return null;
+  // SVG table: version(2) offsetToDocList(4) reserved(4)
+  const docListOff = svgOff + dv.getUint32(svgOff + 2);
+  const numEntries = dv.getUint16(docListOff);
+  const result = {};
+  for (let i = 0; i < numEntries; i++) {
+    const eOff = docListOff + 2 + i * 12;
+    const startGID = dv.getUint16(eOff);
+    const endGID   = dv.getUint16(eOff + 2);
+    const docOff   = docListOff + dv.getUint32(eOff + 4);
+    const docLen   = dv.getUint32(eOff + 8);
+    const bytes    = new Uint8Array(dv.buffer, dv.byteOffset + docOff, docLen);
+    // Check for gzip
+    let svgStr;
+    if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
+      try {
+        const ds = new DecompressionStream('gzip');
+        // Synchronous gzip not available; store raw bytes and decompress async
+        result[startGID] = { gzipBytes: bytes, startGID, endGID };
+        continue;
+      } catch(e) {}
+    }
+    svgStr = new TextDecoder().decode(bytes);
+    for (let gid = startGID; gid <= endGID; gid++) result[gid] = { svgStr, startGID, endGID };
+  }
+  return result;
+}
+
+// ═══════════════════════════════════════
+// COLR v0 PARSER — extracts layers + palette colors
+// ═══════════════════════════════════════
+function parseCOLRFromFontBuf(dv) {
+  const numTables = dv.getUint16(4);
+  let colrOff = 0, cpalOff = 0;
+  for (let i = 0; i < numTables; i++) {
+    const tag = String.fromCharCode(dv.getUint8(12+i*16),dv.getUint8(13+i*16),dv.getUint8(14+i*16),dv.getUint8(15+i*16)).trim();
+    const off = dv.getUint32(20+i*16);
+    const len = dv.getUint32(24+i*16);
+    if (tag === 'COLR' && len > 0) colrOff = off;
+    if (tag === 'CPAL' && len > 0) cpalOff = off;
+  }
+  if (!colrOff || !cpalOff) return null;
+
+  // Parse CPAL: version(2) numEntries(2) numPalettes(2) numColorRecords(2) offsetFirstColorRecord(4)
+  const numEntries = dv.getUint16(cpalOff + 2);
+  const numColors  = dv.getUint16(cpalOff + 6);
+  const offColors  = dv.getUint32(cpalOff + 8);
+  const palette = [];
+  for (let i = 0; i < numColors; i++) {
+    const b = dv.getUint8(cpalOff + offColors + i*4);
+    const g = dv.getUint8(cpalOff + offColors + i*4 + 1);
+    const r = dv.getUint8(cpalOff + offColors + i*4 + 2);
+    const a = dv.getUint8(cpalOff + offColors + i*4 + 3);
+    palette.push({ r, g, b, a });
+  }
+
+  // Parse COLR v0: numBase(2) offBase(4) offLayer(4) numLayer(2)
+  const numBase  = dv.getUint16(colrOff + 2);
+  const offBase  = dv.getUint32(colrOff + 4);
+  const offLayer = dv.getUint32(colrOff + 8);
+  const numLayer = dv.getUint16(colrOff + 12);
+  if (!numLayer) return null;
+
+  // Build glyphId → [{layerGlyphId, paletteIndex}]
+  const layers = {}; // glyphId → array of {gid, palIdx}
+  for (let i = 0; i < numBase; i++) {
+    const gid        = dv.getUint16(colrOff + offBase + i*6);
+    const firstLayer = dv.getUint16(colrOff + offBase + i*6 + 2);
+    const nLayers    = dv.getUint16(colrOff + offBase + i*6 + 4);
+    const arr = [];
+    for (let j = 0; j < nLayers; j++) {
+      const lgid   = dv.getUint16(colrOff + offLayer + (firstLayer+j)*4);
+      const palIdx = dv.getUint16(colrOff + offLayer + (firstLayer+j)*4 + 2);
+      arr.push({ gid: lgid, palIdx });
+    }
+    layers[gid] = arr;
+  }
+  return { layers, palette };
+}
+
+// ═══════════════════════════════════════
+// COLR check — does this font have real palette data?
+// ═══════════════════════════════════════
+function hasCPALData(dv) {
+  const numTables = dv.getUint16(4);
+  for (let i = 0; i < numTables; i++) {
+    const tag = String.fromCharCode(dv.getUint8(12+i*16),dv.getUint8(13+i*16),dv.getUint8(14+i*16),dv.getUint8(15+i*16)).trim();
+    const len = dv.getUint32(24+i*16);
+    if (tag === 'CPAL' && len > 0) return true;
+  }
+  return false;
 }
 
 function removeFont(id) { S.fonts = S.fonts.filter(f => f.id !== id); renderFontList(); renderColorList(); renderGlyphs(); updateStatus() }
+
+// ═══════════════════════════════════════
+// CBDT BITMAP PARSER
+// Parse CBDT/CBLC tables and extract PNG bitmaps per glyph
+// ═══════════════════════════════════════
+function parseCBDT(otFont, rawBuf) {
+  try {
+    const cblc = otFont.tables['CBLC'] ? otFont.tables['CBLC']._rawData : null;
+    const cbdt = otFont.tables['CBDT'] ? otFont.tables['CBDT']._rawData : null;
+    if (!cblc || !cbdt) return null;
+    return parseCBDTRaw(new DataView(cblc), new DataView(cbdt), otFont.getGlyphOrder());
+  } catch(e) {}
+  // Fallback: parse from rawBuf directly by finding CBDT/CBLC table offsets
+  try {
+    return parseCBDTFromFontBuf(new DataView(rawBuf), otFont);
+  } catch(e) {
+    console.warn('CBDT parse failed:', e);
+    return null;
+  }
+}
+
+function parseCBDTFromFontBuf(dv, otFont) {
+  // Read sfnt table directory
+  const numTables = dv.getUint16(4);
+  let cblcOff = 0, cblcLen = 0, cbdtOff = 0, cbdtLen = 0;
+  for (let i = 0; i < numTables; i++) {
+    const tag = String.fromCharCode(dv.getUint8(12+i*16), dv.getUint8(13+i*16), dv.getUint8(14+i*16), dv.getUint8(15+i*16));
+    const off = dv.getUint32(20+i*16);
+    const len = dv.getUint32(24+i*16);
+    if (tag === 'CBLC') { cblcOff = off; cblcLen = len; }
+    if (tag === 'CBDT') { cbdtOff = off; cbdtLen = len; }
+  }
+  if (!cblcOff || !cbdtOff) return null;
+
+  const cblc = new DataView(dv.buffer, cblcOff, cblcLen);
+  const cbdt = new DataView(dv.buffer, cbdtOff, cbdtLen);
+  return parseCBDTRaw(cblc, cbdt, otFont.getGlyphOrder());
+}
+
+function parseCBDTRaw(cblc, cbdt, glyphOrder) {
+  const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47];
+  const numSizes = cblc.getUint32(4);
+  const result = {}; // glyphId -> { png, bearingY }
+  let globalPpem = 127;
+
+  for (let si = 0; si < numSizes; si++) {
+    const bstOff = 8 + si * 48;
+    const arrOff = cblc.getUint32(bstOff);
+    const numSubs = cblc.getUint32(bstOff + 8);
+    // ppemX is at bstOff+44
+    try { globalPpem = cblc.getUint8(bstOff + 44) || globalPpem; } catch(e) {}
+
+    for (let ti = 0; ti < numSubs; ti++) {
+      const entryOff = arrOff + ti * 8;
+      const firstGlyph = cblc.getUint16(entryOff);
+      const lastGlyph  = cblc.getUint16(entryOff + 2);
+      const subRelOff  = cblc.getUint32(entryOff + 4);
+      const subOff     = arrOff + subRelOff;
+
+      const idxFmt = cblc.getUint16(subOff);
+      const imgFmt = cblc.getUint16(subOff + 2);
+      const imgDataOff = cblc.getUint32(subOff + 4);
+
+      if (idxFmt === 1) {
+        // Format 1: array of offsets
+        const count = lastGlyph - firstGlyph + 2;
+        const offsets = [];
+        for (let k = 0; k < count; k++) offsets.push(cblc.getUint32(subOff + 8 + k * 4));
+
+        for (let gi = 0; gi < lastGlyph - firstGlyph + 1; gi++) {
+          const start = imgDataOff + offsets[gi];
+          const end   = imgDataOff + offsets[gi + 1];
+          if (start >= end) continue;
+
+          // Find PNG magic within chunk (header is 5 or 9 bytes before PNG)
+          let pngStart = -1;
+          const maxSearch = Math.min(16, end - start);
+          for (let b = 0; b < maxSearch; b++) {
+            if (cbdt.getUint8(start + b)     === 0x89 &&
+                cbdt.getUint8(start + b + 1) === 0x50 &&
+                cbdt.getUint8(start + b + 2) === 0x4e &&
+                cbdt.getUint8(start + b + 3) === 0x47) {
+              pngStart = b; break;
+            }
+          }
+          if (pngStart < 0) continue;
+
+          const glyphId = firstGlyph + gi;
+          // Extract SmallGlyphMetrics: height(1) width(1) bearingX(1s) bearingY(1s) advance(1)
+          // Header is pngStart bytes; metrics start at offset 0 of chunk
+          const bearingY = cbdt.getInt8(start + 3); // 4th byte = bearingY (signed)
+          result[glyphId] = {
+            png: new Uint8Array(cbdt.buffer, cbdt.byteOffset + start + pngStart, end - start - pngStart),
+            bearingY
+          };
+        }
+      }
+      // Format 2 (fixed size) can be added if needed
+    }
+  }
+  result._ppem = globalPpem;
+  return result;
+}
 function toggleFont(id) { const f = S.fonts.find(f => f.id === id); if (f) { f.enabled = !f.enabled; renderFontList(); renderGlyphs(); updateStatus() } }
 
 function renderFontList() {
@@ -564,8 +1141,13 @@ function renderFontList() {
   const dz = document.getElementById('dz');
   S.fonts.forEach(f => {
     const el = document.createElement('div'); el.className = 'fi';
+    const badge = f.colorType
+      ? '<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:#EEF2FF;color:#6366F1;font-family:var(--mono);margin-left:3px">' + f.colorType.toUpperCase() + '</span>'
+      : (f.otFont && f.otFont._instanceFid
+        ? '<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:#FEF9C3;color:#854D0E;font-family:var(--mono);margin-left:3px">VAR</span>'
+        : '');
     el.innerHTML = '<div class="fdot" style="background:' + f.color + '"></div>'
-      + '<div class="finfo"><div class="fname" title="' + f.name + '">' + f.name + '</div></div>'
+      + '<div class="finfo"><div class="fname" title="' + f.name + '">' + f.name + badge + '</div></div>'
       + '<button class="ftog ' + (f.enabled ? 'on' : '') + '" onclick="toggleFont(' + f.id + ')"></button>'
       + '<button class="frem" onclick="removeFont(' + f.id + ')">&#xD7;</button>';
     body.insertBefore(el, dz);
@@ -596,7 +1178,16 @@ function closeCharsetModal() {
 }
 
 function onCsTypeChange() {
+  // Get type from sidebar select (modal no longer has its own select)
   const t = document.getElementById('cs-type-sidebar').value;
+  // Keep hidden cs-type in sync for applyCharset()
+  let hidden = document.getElementById('cs-type');
+  if (!hidden) {
+    hidden = document.createElement('input');
+    hidden.type = 'hidden'; hidden.id = 'cs-type';
+    document.body.appendChild(hidden);
+  }
+  hidden.value = t;
 
   const ex = document.getElementById('cs-extra');
   const title = document.getElementById('cs-modal-title');
@@ -624,6 +1215,8 @@ function onCsSidebarChange() {
   } else {
     applyCharset();
   }
+  // Reset modal hidden input so it doesn't override sidebar
+  const h = document.getElementById('cs-type'); if (h) h.value = '';
 }
 
 function loadEncFile(e) {
@@ -652,9 +1245,11 @@ function loadEncFile(e) {
 }
 
 function applyCharset() {
-  // Read type from sidebar select (single source of truth)
-  const sidebar = document.getElementById('cs-type-sidebar');
-  const t = sidebar ? sidebar.value : '';
+  // Read from sidebar select (primary) or hidden cs-type (when called from modal)
+  const sidebarSel = document.getElementById('cs-type-sidebar');
+  const hiddenSel  = document.getElementById('cs-type');
+  const t = (hiddenSel && hiddenSel.value) ? hiddenSel.value : (sidebarSel ? sidebarSel.value : '');
+  if (t === 'font-glyphs') { applyFontGlyphs(); return; }
   if (t === 'ascii') {
     S.charset = []; for (let i = 0x20; i <= 0x7E; i++) S.charset.push(i); S.charsetName = 'ASCII';
   } else if (t.startsWith('win')) {
@@ -667,8 +1262,11 @@ function applyCharset() {
   } else if (t === 'enc') {
     if (!encFileCodes || !encFileCodes.length) { toast('請先載入 .enc 檔案'); return }
     S.charset = encFileCodes; S.charsetName = '.enc (' + S.charset.length + ')';
-  } else { return }
+  }
   updateCsLabel(); closeCharsetModal(); renderGlyphs(); updateStatus();
+  // Reset sidebar select so unicode-range/enc can be re-selected
+  const sel = document.getElementById('cs-type-sidebar');
+  if (sel && (t === 'unicode-range' || t === 'enc')) sel.value = '';
 }
 
 function parseUniRange(raw) {
@@ -769,6 +1367,14 @@ function toggleBorder() {
   });
 }
 
+function toggleLabel() {
+  S.showLabel = !S.showLabel;
+  document.getElementById('btn-label').classList.toggle('active', S.showLabel);
+  document.querySelectorAll('.glabel').forEach(el => {
+    el.style.visibility = S.showLabel ? '' : 'hidden';
+  });
+}
+
 function toggleLogHL() {
   S.showLogHL = !S.showLogHL;
   document.getElementById('btn-hl').classList.toggle('active', S.showLogHL);
@@ -789,6 +1395,7 @@ function getMetrics(otf, px) {
     xHeight:   os2 ? (os2.sxHeight  || 0)*sc : 0,
     capHeight: os2 ? (os2.sCapHeight|| 0)*sc : 0,
     hhea_asc: ha*sc, hhea_desc: hd*sc,
+
   };
 }
 
@@ -799,17 +1406,40 @@ function getCellDims(px) {
   let maxH = px + 8;
   af.forEach(font => {
     const m = getMetrics(font.otFont, px);
+    // Use winAscent/winDescent which covers combining marks above ascender
     maxH = Math.max(maxH, Math.ceil(m.hhea_asc - m.hhea_desc) + 8);
   });
   return { w: px+16, h: maxH };
+}
+
+// Non-Unicode glyphs are matched across fonts by GLYPH NAME, not by raw GID
+// (GIDs are font-specific — the same index means a different glyph in each font).
+// Build a name → gid lookup for one font, cached on the font object.
+function getFontNameToGid(font) {
+  if (font._nameToGid) return font._nameToGid;
+  const map = {};
+  const otf = font.otFont;
+  try {
+    const n = otf.glyphs ? otf.glyphs.length : 0;
+    for (let gid = 0; gid < n; gid++) {
+      let nm = '';
+      try { const g = otf.glyphs.get(gid); nm = (g && g.name) ? g.name : ''; } catch(e) {}
+      if (nm && map[nm] === undefined) map[nm] = gid;
+    }
+  } catch(e) {}
+  font._nameToGid = map;
+  return map;
+}
+function getGidByName(font, name) {
+  if (!name) return -1;
+  const m = getFontNameToGid(font);
+  return m[name] !== undefined ? m[name] : -1;
 }
 
 function drawGlyph(canvas, cp, font, px, color, opacity, drawMet, isOverlay) {
   const ctx = canvas.getContext('2d');
   if (!isOverlay) ctx.clearRect(0, 0, canvas.width, canvas.height);
   const m = getMetrics(font.otFont, px);
-  // Use unified baseline: anchor based on the tallest font across all enabled fonts
-  // so all glyphs share the same baseline Y within the unified cell height
   const allFonts = S.fonts.filter(f => f.enabled);
   let maxAsc = m.hhea_asc, maxDesc = m.hhea_desc;
   allFonts.forEach(f => {
@@ -819,24 +1449,214 @@ function drawGlyph(canvas, cp, font, px, color, opacity, drawMet, isOverlay) {
   });
   const totalH = maxAsc - maxDesc;
   const baselineY = (canvas.height - totalH) / 2 + maxAsc;
-  const glyph = font.otFont.charToGlyph(String.fromCodePoint(cp));
-  const adv = glyph ? (glyph.advanceWidth || 0) * (px / font.otFont.unitsPerEm) : px;
-  const ox = Math.max(0, (canvas.width - adv) / 2);
-  if (glyph && glyph.index !== 0) {
-    ctx.save();
-    if (isOverlay) {
-      const tmp = document.createElement('canvas'); tmp.width = canvas.width; tmp.height = canvas.height;
-      const tc = tmp.getContext('2d');
-      tc.fillStyle = color;
-      tc.fill(new Path2D(glyph.getPath(ox, baselineY, px).toPathData(4)));
-      ctx.globalCompositeOperation = 'multiply';
-      ctx.globalAlpha = opacity;
-      ctx.drawImage(tmp, 0, 0);
-    } else {
-      ctx.globalAlpha = opacity; ctx.fillStyle = color;
-      ctx.fill(new Path2D(glyph.getPath(ox, baselineY, px).toPathData(4)));
+
+  // For non-Unicode glyph (cp < 0): the entry is an index into S.glyphNames (a
+  // cross-font name list). Resolve it to THIS font's own gid by name, so the same
+  // row shows the same glyph in every font. null = unicode entry; -1 = this font
+  // lacks the glyph (draw nothing); >=0 = the resolved gid in this font.
+  const _nonUniGid = cp < 0
+    ? getGidByName(font, (S.glyphNames && S.glyphNames[-(cp) - 1]) || null)
+    : null;
+
+  // CBDT: draw bitmap PNG directly
+  if (font.colorType === 'cbdt' && font.cbdtMap) {
+    const glyphId = _nonUniGid !== null ? _nonUniGid : (() => { const g = font.otFont.charToGlyph(String.fromCodePoint(cp)); return g ? g.index : -1; })();
+    const entry = glyphId >= 0 ? font.cbdtMap[glyphId] : null;
+    if (entry) {
+      const blob = new Blob([entry.png], {type:'image/png'});
+      const url  = URL.createObjectURL(blob);
+      const img  = new Image();
+      img.onload = () => {
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        if (isOverlay) ctx.globalCompositeOperation = 'multiply';
+        const ppem = font.cbdtMap._ppem || 127;
+        const scale = px / ppem;
+        const dw = img.width  * scale;
+        const dh = img.height * scale;
+        const dx = (canvas.width - dw) / 2;
+        // Use global unified baselineY (accounts for tallest font in group)
+        // bearingY = pixels above baseline at ppem, scaled to render px
+        const dy = baselineY - entry.bearingY * scale;
+        ctx.drawImage(img, dx, dy, dw, dh);
+        ctx.restore();
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
     }
-    ctx.restore();
+  // sbix: PNG bitmap (same as CBDT)
+  } else if (font.colorType === 'sbix' && font.sbixMap) {
+    const glyphId = _nonUniGid !== null ? _nonUniGid : (() => { const g = font.otFont.charToGlyph(String.fromCodePoint(cp)); return g ? g.index : -1; })();
+    const entry = glyphId >= 0 ? font.sbixMap[glyphId] : null;
+    // No bitmap for whitespace/control chars is normal
+    if (!entry && cp > 0x20 && cp !== 0xA0) { console.warn('sbix: no bitmap for glyphId', glyphId, 'cp', cp.toString(16)); }
+    if (entry && entry.png) {
+      const blob = new Blob([entry.png], {type:'image/png'});
+      const url  = URL.createObjectURL(blob);
+      const img  = new Image();
+      img.onload = () => {
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        if (isOverlay) ctx.globalCompositeOperation = 'multiply';
+        const ppem = font.sbixMap._ppem || 128;
+        const scale = px / ppem;
+        const dw = img.width * scale, dh = img.height * scale;
+        const dx = (canvas.width - dw) / 2;
+        let dy;
+        if (entry.yMax !== null && entry.yMax !== undefined) {
+          const upm_s = font.otFont.unitsPerEm;
+          dy = baselineY - entry.yMax * (px / upm_s);
+        } else {
+          dy = baselineY - dh;
+        }
+        ctx.drawImage(img, dx, dy, dw, dh);
+        ctx.restore();
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    }
+  // COLR v0: render each layer with its palette color
+  } else if (font.colorType === 'colr' && font.colrData) {
+    const glyphId = _nonUniGid !== null ? _nonUniGid : (() => { const g = font.otFont.charToGlyph(String.fromCodePoint(cp)); return g ? g.index : -1; })();
+    const layerList = glyphId >= 0 ? font.colrData.layers[glyphId] : null;
+    if (layerList && layerList.length) {
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      if (isOverlay) ctx.globalCompositeOperation = 'multiply';
+      for (const layer of layerList) {
+        const lg = font.otFont.glyphs.get(layer.gid);
+        if (!lg || lg.index === 0) continue;
+        const pal = font.colrData.palette[layer.palIdx];
+        if (!pal) continue;
+        const layerColor = `rgba(${pal.r},${pal.g},${pal.b},${pal.a/255})`;
+        const adv = lg.advanceWidth * (px / font.otFont.unitsPerEm);
+        const ox2 = Math.max(0, (canvas.width - adv) / 2);
+        ctx.fillStyle = layerColor;
+        ctx.fill(new Path2D(lg.getPath(ox2, baselineY, px).toPathData(4)));
+      }
+      ctx.restore();
+    }
+  // SVG: extract embedded PNG and draw directly, or fallback to SVG data URI
+  } else if (font.colorType === 'svg' && font.svgMap) {
+    const glyphId = _nonUniGid !== null ? _nonUniGid : (() => { const g = font.otFont.charToGlyph(String.fromCodePoint(cp)); return g ? g.index : -1; })();
+    const entry = glyphId >= 0 ? font.svgMap[glyphId] : null;
+    if (entry && entry.svgStr) {
+      const upm = font.otFont.unitsPerEm;
+      const _g4adv = _nonUniGid !== null
+        ? (font.otFont.glyphs && font.otFont.glyphs.get(_nonUniGid))
+        : font.otFont.charToGlyph(String.fromCodePoint(cp));
+      const adv = _g4adv ? (_g4adv.advanceWidth || 0) * (px / upm) : 0;
+      const ox  = Math.max(0, (canvas.width - adv) / 2);
+      const svg = entry.svgStr;
+
+      // Try PNG extraction first (for SVG-with-embedded-PNG fonts like HFMintMeadow)
+      const scM  = svg.match(/scale\(([0-9]+(?:\.[0-9]+)?)\)/);  // scale(N) single number only
+      const trM  = svg.match(/translate\(([0-9.-]+),([0-9.-]+)\)/);
+      const imgM = svg.match(/href="(data:image\/png;base64,[^"]+)"/) ||
+                   svg.match(/xlink:href="(data:image\/png;base64,[^"]+)"/);
+      const wM   = svg.match(/<image[^>]*width="(\d+)"/);
+      const hM   = svg.match(/<image[^>]*height="(\d+)"/);
+
+      if (scM && trM && imgM && wM && hM) {
+        // Embedded PNG path
+        const svgSc = parseFloat(scM[1]);
+        const tx = parseFloat(trM[1]);
+        const ty = parseFloat(trM[2]);
+        const imgW = parseInt(wM[1]);
+        const imgH = parseInt(hM[1]);
+        const rs = px / upm * svgSc;
+        const dx = ox + tx * rs;
+        const dy = baselineY + ty * rs;
+        const dw = imgW * rs;
+        const dh = imgH * rs;
+        const img = new Image();
+        img.onload = () => {
+          ctx.save();
+          ctx.globalAlpha = opacity;
+          if (isOverlay) ctx.globalCompositeOperation = 'multiply';
+          ctx.drawImage(img, dx, dy, dw, dh);
+          ctx.restore();
+        };
+        img.src = imgM[1];
+      } else {
+        // Vector SVG path (scale(1,-1) format or other)
+        // Replace existing <g transform="scale(1,-1)"> with full canvas transform
+        const sc = px / upm;
+        const tfm = 'translate(' + ox.toFixed(2) + ',' + baselineY.toFixed(2) + ') scale(' + sc.toFixed(6) + ',' + (-sc).toFixed(6) + ')';
+        let svgC = svg.replace(/xlink:href/g, 'href');
+        // Replace scale(1,-1) with our transform, or insert transform on <g>
+        if (svgC.includes('transform="scale(1,-1)"')) {
+          svgC = svgC.replace('transform="scale(1,-1)"', 'transform="' + tfm + '"');
+        } else {
+          svgC = svgC.replace('<g ', '<g transform="' + tfm + '" ');
+        }
+        const wrapped = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + canvas.width + '" height="' + canvas.height + '">' + svgC + '</svg>';
+        const dUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(wrapped);
+        const img = new Image();
+        img.onload = () => { ctx.save(); ctx.globalAlpha = opacity; if (isOverlay) ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(img, 0, 0); ctx.restore(); };
+        img.onerror = () => console.warn('SVG fallback error cp=' + cp.toString(16));
+        img.src = dUrl;
+      }
+    }
+  } else if (font.otFont._variationSettings && font.otFont._instanceFid) {
+    // Variable font instance: use per-instance @font-face family name
+    const _vfG = _nonUniGid !== null ? null : font.otFont.charToGlyph(String.fromCodePoint(cp));
+    const adv = _vfG ? (_vfG.advanceWidth || 0) * (px / font.otFont.unitsPerEm) : px;
+    const ox = Math.max(0, (canvas.width - adv) / 2);
+    if (cp < 0) return; // VF non-Unicode glyphs not supported
+    const char = String.fromCodePoint(cp);
+    const fid = font.otFont._instanceFid;
+    const fontStr = `${px}px ${fid}`;
+    // Ensure font is loaded then draw
+    document.fonts.load(fontStr, char).then(() => {
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      if (isOverlay) ctx.globalCompositeOperation = 'multiply';
+      ctx.font = fontStr;
+      ctx.fillStyle = color;
+      ctx.fillText(char, ox, baselineY);
+      ctx.restore();
+    }).catch(() => {
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.font = fontStr;
+      ctx.fillStyle = color;
+      ctx.fillText(char, ox, baselineY);
+      ctx.restore();
+    });
+  } else {
+    let glyph;
+    if (_nonUniGid !== null) {
+      // Non-Unicode entry, resolved to this font's own gid by name. -1 means this
+      // font has no such glyph → blank cell (and avoids opentype.js out-of-range
+      // throws). Otherwise draw the resolved glyph.
+      const gs = font.otFont.glyphs;
+      if (gs && _nonUniGid >= 0 && _nonUniGid < gs.length) {
+        try { glyph = gs.get(_nonUniGid); } catch(e) { glyph = null; }
+      } else {
+        glyph = null;
+      }
+    } else {
+      glyph = font.otFont.charToGlyph(String.fromCodePoint(cp));
+    }
+    const adv = glyph ? (glyph.advanceWidth || 0) * (px / font.otFont.unitsPerEm) : px;
+    const ox = Math.max(0, (canvas.width - adv) / 2);
+    if (glyph && (_nonUniGid !== null || glyph.index !== 0)) {
+      ctx.save();
+      if (isOverlay) {
+        const tmp = document.createElement('canvas'); tmp.width = canvas.width; tmp.height = canvas.height;
+        const tc = tmp.getContext('2d');
+        tc.fillStyle = color;
+        tc.fill(new Path2D(glyph.getPath(ox, baselineY, px).toPathData(4)));
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.globalAlpha = opacity;
+        ctx.drawImage(tmp, 0, 0);
+      } else {
+        ctx.globalAlpha = opacity; ctx.fillStyle = color;
+        ctx.fill(new Path2D(glyph.getPath(ox, baselineY, px).toPathData(4)));
+      }
+      ctx.restore();
+    }
   }
   if (drawMet) {
     const yo = baselineY;
@@ -852,6 +1672,30 @@ function drawGlyph(canvas, cp, font, px, color, opacity, drawMet, isOverlay) {
     if (ms.typoDescender.on) dl(m.typoDescender, ms.typoDescender.color, [4,2]);
     if (ms.xHeight.on)       dl(m.xHeight,       ms.xHeight.color,       [2,4]);
     if (ms.capHeight.on)     dl(m.capHeight,      ms.capHeight.color,     [2,4]);
+    if (ms.sidebearing.on) {
+      // Draw advance width boundaries (LSB left edge, RSB right edge)
+      try {
+        const upm = font.otFont.unitsPerEm;
+        const scU = px / upm;
+        const g = cp >= 0
+          ? font.otFont.charToGlyph(String.fromCodePoint(cp))
+          : (_nonUniGid >= 0 && font.otFont.glyphs ? font.otFont.glyphs.get(_nonUniGid) : null);
+        if (g && g.advanceWidth > 0) {
+          const adv = g.advanceWidth * scU;
+          const ox = Math.max(0, (canvas.width - adv) / 2);
+          const xLeft  = ox;        // advance width left boundary
+          const xRight = ox + adv;  // advance width right boundary
+          const yTop = baselineY - Math.abs(m.hheaAscent) * 0.9;
+          const yBot = baselineY + Math.abs(m.hheaDescent) * 0.4;
+          ctx.save();
+          ctx.strokeStyle = ms.sidebearing.color;
+          ctx.lineWidth = 1; ctx.setLineDash([2,3]); ctx.globalAlpha = 0.8;
+          ctx.beginPath(); ctx.moveTo(xLeft,  yTop); ctx.lineTo(xLeft,  yBot); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(xRight, yTop); ctx.lineTo(xRight, yBot); ctx.stroke();
+          ctx.restore();
+        }
+      } catch(e) {}
+    }
   }
 }
 
@@ -864,31 +1708,54 @@ function renderGlyphs() {
   const af = S.fonts.filter(f => f.enabled);
   if (!af.length || !S.charset.length) { gv.style.display = 'none'; es.style.display = 'flex'; return }
   gv.style.display = ''; es.style.display = 'none';
-  if      (S.view === 'grid')    renderGrid(gv, af);
-  else if (S.view === 'sxs')     renderSxS(gv, af);
-  else                           renderOverlay(gv, af);
+  try {
+    if      (S.view === 'grid')    renderGrid(gv, af);
+    else if (S.view === 'sxs')     renderSxS(gv, af);
+    else                           renderOverlay(gv, af);
+  } catch (err) {
+    console.error('renderGlyphs error (view=' + S.view + '):', err);
+    gv.innerHTML = '<div style="padding:24px;color:var(--danger);font-family:var(--mono);font-size:12px;white-space:pre-wrap;line-height:1.7">'
+      + '渲染錯誤（' + S.view + '）：\n' + (err && err.stack ? err.stack : (err && err.message ? err.message : String(err)))
+      + '</div>';
+  }
+}
+
+function cpToKey(cp) {
+  // Returns the log key for a charset entry
+  if (cp >= 0) return toUni(cp);
+  // Non-Unicode: shared glyph name (matched across fonts by name)
+  const nm = (S.glyphNames && S.glyphNames[-(cp) - 1]) || ('GID' + (-(cp) - 1));
+  return 'glyph:' + nm;
 }
 
 function makeCell(cp) {
   const cell = document.createElement('div'); cell.className = 'gc';
   if (!S.showBorder) cell.style.border = '1px solid transparent';
-  const uni = toUni(cp);
-  if (S.log.has(uni) && S.showLogHL) cell.classList.add('in-log', 'hl-on');
-  else if (S.log.has(uni)) cell.classList.add('in-log');
-  cell.addEventListener('dblclick', () => addLog(cp));
+  const key = cpToKey(cp);
+  if (S.log.has(key) && S.showLogHL) cell.classList.add('in-log', 'hl-on');
+  else if (S.log.has(key)) cell.classList.add('in-log');
+  cell.addEventListener('dblclick', () => addLogEntry(cp));
   cell.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    const key = toUni(cp);
-    if (S.log.has(key)) { removeLog(key); toast('已移除：' + key); }
-    // if not in log, do nothing (no browser menu)
+    const k = cpToKey(cp);
+    if (S.log.has(k)) { removeLog(k); toast('已移除：' + k); }
   });
   return cell;
+}
+
+function addLogEntry(cp) {
+  const key = cpToKey(cp);
+  if (S.log.has(key)) return;
+  S.log.add(key);
+  renderLogList(); updateStatus(); refreshLogHighlights();
 }
 
 function makeLabel(cp) {
   const lbl = document.createElement('div'); lbl.className = 'glabel';
   if (!S.showBorder) lbl.style.borderTop = '1px solid transparent';
-  lbl.textContent = toUni(cp);
+  if (!S.showLabel) lbl.style.visibility = 'hidden';
+  lbl.textContent = cp >= 0 ? toUni(cp)
+    : ((S.glyphNames && S.glyphNames[-(cp) - 1]) || ('GID' + (-(cp) - 1)));
   return lbl;
 }
 
@@ -953,11 +1820,12 @@ function renderSxS(container, fonts) {
   S.charset.forEach(cp => {
     // One group = all fonts for this glyph
     const group = document.createElement('div');
-    group.style.cssText = 'display:flex;flex-direction:row;gap:' + cellGap + 'px;flex-shrink:0';
+    group.style.cssText = 'display:flex;flex-direction:row;gap:' + cellGap + 'px;flex-shrink:0;align-items:flex-start';
 
     fonts.forEach(font => {
       const gc = makeCell(cp);
       gc.style.width  = w + 'px';
+      gc.style.height = (h + 18) + 'px'; // canvas h + label height, prevent collapse
       gc.style.flexShrink = '0';
       const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
       drawGlyph(cv, cp, font, S.size, font.color, 1, true, false);
@@ -1110,13 +1978,13 @@ function openColorPick(fontId, e) {
 function applyColorPick() {
   if (!colorPickFontId) return;
   const hex = document.getElementById('cp-hex').value.trim();
-  if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) { toast('格式：#RRGGBB'); return }
+  if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) { toast('格式：#RRGGBB'); closeColorPick(); return }
   const f = S.fonts.find(f => f.id === colorPickFontId);
   if (f) { f.color = hex; renderFontList(); renderColorList(); renderGlyphs() }
   closeColorPick();
 }
 
-function closeColorPick() { document.getElementById('cpop').classList.remove('show'); colorPickFontId = null }
+function closeColorPick() { const p = document.getElementById('cpop'); p.classList.remove('show'); p.style.display = ''; colorPickFontId = null }
 
 document.addEventListener('click', e => {
   const pop = document.getElementById('cpop');
@@ -1127,9 +1995,14 @@ document.addEventListener('click', e => {
 // ISSUE LOG
 // ═══════════════════════════════════════
 function toUni(cp) { return 'uni' + cp.toString(16).toUpperCase().padStart(4, '0') }
+// Label for any charset entry: uniXXXX for Unicode, shared glyph name for non-Unicode
+function cpLabel(cp) {
+  if (cp >= 0) return toUni(cp);
+  return (S.glyphNames && S.glyphNames[-(cp) - 1]) || ('GID' + (-(cp) - 1));
+}
 
 function addLog(cp) {
-  const key = toUni(cp);
+  const key = cpToKey(cp);
   if (S.log.has(key)) { toast(key + ' 已在記錄中'); return }
   S.log.add(key); renderLogList(); updateStatus(); refreshLogHighlights();
   switchTab('log'); toast('已加入：' + key);
@@ -1173,7 +2046,9 @@ function renderLogList() {
 function refreshLogHighlights() {
   document.querySelectorAll('.gc').forEach(cell => {
     const lbl = cell.querySelector('.glabel'); if (!lbl) return;
-    const inLog = S.log.has(lbl.textContent.trim());
+    const labelText = lbl.textContent.trim();
+    // Check both uni format and glyph: format
+    const inLog = S.log.has(labelText) || S.log.has('glyph:' + labelText);
     cell.classList.toggle('in-log', inLog);
     cell.classList.toggle('hl-on', inLog && S.showLogHL);
   });
@@ -1183,11 +2058,15 @@ function exportLog() {
   if (!S.log.size) { toast('記錄為空'); return }
   const date = new Date().toISOString().slice(0, 10);
   const sorted = [...S.log].sort();
-  // Format A — .enc: FontLab header + uniXXXX per line
+  // Format A — .enc: glyph: prefix → plain name, uni → uniXXXX
+  const encKeys = sorted.map(k => k.startsWith('glyph:') ? k.slice(6) : k);
   const header = '%%FONTLAB ENCODING: -1; ' + date + '\n%%GROUP:FontQA\n';
-  dlFile('font-qa-issues.enc', header + sorted.join('\n'), 'text/plain');
-  // Format C — .txt: plain character string, no newlines
-  const plainChars = sorted.map(key => String.fromCodePoint(parseInt(key.slice(3), 16))).join('');
+  dlFile('font-qa-issues.enc', header + encKeys.join('\n'), 'text/plain');
+  // Format B — .txt: Unicode chars only
+  const plainChars = sorted.map(k => {
+    if (k.startsWith('glyph:')) return '';
+    try { return String.fromCodePoint(parseInt(k.slice(3), 16)); } catch(e) { return ''; }
+  }).join('');
   dlFile('font-qa-issues.txt', plainChars, 'text/plain');
   toast('已匯出 .enc + .txt');
 }
@@ -1259,7 +2138,7 @@ async function exportPDF() {
       pdfCellBorder(cx, cy, cellW, cellH);
       doc.addImage(img, 'PNG', cx, cy, cellW, cellH, undefined, 'FAST');
       doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(150, 150, 158);
-      doc.text(toUni(cp), cx + cellW/2, cy + cellH + 7.5, { align: 'center' });
+      doc.text(cpLabel(cp), cx + cellW/2, cy + cellH + 7.5, { align: 'center' });
       cx += cellW + gapPx;
     }
   } else {
@@ -1296,7 +2175,7 @@ async function exportPDF() {
           pdfCellBorder(cx, cy, cellW, cellH);
           doc.addImage(img, 'PNG', cx, cy, cellW, cellH, undefined, 'FAST');
           doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(150, 150, 158);
-          doc.text(toUni(cp), cx + cellW/2, cy + cellH + 7.5, { align: 'center' });
+          doc.text(cpLabel(cp), cx + cellW/2, cy + cellH + 7.5, { align: 'center' });
         });
       });
       cy += cellH + labelH + gapPx; gi += groupsPerRow;
@@ -1310,7 +2189,6 @@ function renderGlyphHR(cp, font, px, color, w, h, scale) {
   const ctx = oc.getContext('2d'); ctx.scale(scale, scale);
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
   const m = getMetrics(font.otFont, px);
-  // Use unified baseline across all enabled fonts
   const allFonts = S.fonts.filter(f => f.enabled);
   let maxAsc = m.hhea_asc, maxDesc = m.hhea_desc;
   allFonts.forEach(f => {
@@ -1320,12 +2198,35 @@ function renderGlyphHR(cp, font, px, color, w, h, scale) {
   });
   const totalH   = maxAsc - maxDesc;
   const baselineY = (h - totalH) / 2 + maxAsc;
-  const glyph    = font.otFont.charToGlyph(String.fromCodePoint(cp));
-  if (glyph && glyph.index !== 0) {
-    const adv = (glyph.advanceWidth || 0) * (px / font.otFont.unitsPerEm);
-    const ox  = Math.max(0, (w - adv) / 2);
-    ctx.fillStyle = color;
-    ctx.fill(new Path2D(glyph.getPath(ox, baselineY, px).toPathData(4)));
+  if (font.colorType === 'cbdt' && font.cbdtMap) {
+    // CBDT: synchronous bitmap drawing not possible in renderGlyphHR
+    // Draw a placeholder — CBDT in PDF requires async which jsPDF doesn't support well
+    ctx.fillStyle = '#CCC';
+    ctx.fillRect(4, 4, w-8, h-8);
+    ctx.fillStyle = '#888'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('CBDT', w/2, h/2);
+  } else if (font.colorType && font.otFont._cssFontFamily) {
+    const glyph = font.otFont.charToGlyph(String.fromCodePoint(cp));
+    const adv = glyph ? (glyph.advanceWidth || 0) * (px / font.otFont.unitsPerEm) : px;
+    const ox = Math.max(0, (w - adv) / 2);
+    ctx.font = px + 'px ' + font.otFont._cssFontFamily;
+    ctx.fillText(String.fromCodePoint(cp), ox, baselineY);
+  } else {
+    let glyph;
+    if (cp < 0) {
+      // Non-Unicode entry: resolve this font's own gid by shared name (blank if absent)
+      const gid = getGidByName(font, (S.glyphNames && S.glyphNames[-(cp) - 1]) || null);
+      const gs = font.otFont.glyphs;
+      glyph = (gs && gid >= 0 && gid < gs.length) ? (() => { try { return gs.get(gid); } catch(e) { return null; } })() : null;
+    } else {
+      glyph = font.otFont.charToGlyph(String.fromCodePoint(cp));
+    }
+    if (glyph && (cp < 0 || glyph.index !== 0)) {
+      const adv = (glyph.advanceWidth || 0) * (px / font.otFont.unitsPerEm);
+      const ox  = Math.max(0, (w - adv) / 2);
+      ctx.fillStyle = color;
+      ctx.fill(new Path2D(glyph.getPath(ox, baselineY, px).toPathData(4)));
+    }
   }
   return oc.toDataURL('image/png');
 }
@@ -1401,48 +2302,63 @@ function gotoGlyph(raw, jump) {
   const statusEl = document.getElementById('goto-status');
   if (!q) { statusEl.textContent = ''; clearGotoHighlight(); return; }
 
-  // Parse codepoint from input
+  // Parse: codepoint (uni/hex/char) or glyph name
   let cp = null;
+  let searchLabel = null;
+
   if (/^uni([0-9A-Fa-f]{4,6})$/i.test(q)) {
     cp = parseInt(q.slice(3), 16);
   } else if (/^[0-9A-Fa-f]{4,6}$/.test(q)) {
     cp = parseInt(q, 16);
   } else if ([...q].length === 1) {
     cp = q.codePointAt(0);
+  } else {
+    // Try glyph name search — find matching label in cells
+    searchLabel = q;
   }
 
-  if (cp === null) { statusEl.textContent = '?'; clearGotoHighlight(); return; }
+  clearGotoHighlight();
 
-  // Check if codepoint is in current charset
+  if (searchLabel) {
+    // Search by glyph name
+    let target = null;
+    document.querySelectorAll('.glabel').forEach(lbl => {
+      if (lbl.textContent.trim() === searchLabel) {
+        const cell = lbl.closest('.gc');
+        if (cell) { cell.classList.add('goto-hl'); if (!target) target = cell; }
+      }
+    });
+    if (target) {
+      statusEl.textContent = searchLabel;
+      statusEl.style.color = 'var(--accent)';
+      if (jump !== false) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      statusEl.textContent = '未收錄';
+      statusEl.style.color = 'var(--danger)';
+    }
+    return;
+  }
+
+  if (cp === null) { statusEl.textContent = '?'; return; }
+
   const idx = S.charset.indexOf(cp);
   if (idx === -1) {
     statusEl.textContent = '未收錄';
     statusEl.style.color = 'var(--danger)';
-    clearGotoHighlight();
     return;
   }
 
   statusEl.textContent = toUni(cp);
   statusEl.style.color = 'var(--accent)';
 
-  // Highlight all matching cells
-  clearGotoHighlight();
-  const uniKey = toUni(cp);
   let target = null;
   document.querySelectorAll('.glabel').forEach(lbl => {
-    if (lbl.textContent.trim() === uniKey) {
+    if (lbl.textContent.trim() === toUni(cp)) {
       const cell = lbl.closest('.gc');
-      if (cell) {
-        cell.classList.add('goto-hl');
-        if (!target) target = cell;
-      }
+      if (cell) { cell.classList.add('goto-hl'); if (!target) target = cell; }
     }
   });
-
-  // Scroll to first match
-  if (target && jump !== false) {
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
+  if (target && jump !== false) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function clearGotoHighlight() {
@@ -1464,11 +2380,312 @@ function clearAll() {
 
 // 已移除第二組 tooltip 腳本，以避免與主 tooltip 重複顯示
 
+// ═══════════════════════════════════════
+// FONT GLYPHS — auto charset from loaded fonts
+// ═══════════════════════════════════════
+// Helper: extract Unicode cp set from one font
+function _extractFontCpSet(font) {
+  const otf = font.otFont;
+  const cpToGid = {};
+  try {
+    const cmap = otf.tables && otf.tables.cmap;
+    if (cmap && cmap.glyphIndexMap) {
+      Object.entries(cmap.glyphIndexMap).forEach(([cp, gid]) => {
+        if (parseInt(cp) >= 0 && gid >= 0) cpToGid[parseInt(cp)] = gid;
+      });
+    }
+  } catch(e) {}
+  if (!Object.keys(cpToGid).length && otf.charToGlyph && font.rawBuf) {
+    const dv2 = new DataView(font.rawBuf);
+    const cmapData = buildGlyphOrderFromCmap(dv2, dv2.getUint16(4));
+    Object.entries(cmapData).forEach(([cp, gid]) => {
+      if (parseInt(cp) >= 0 && gid >= 0) cpToGid[parseInt(cp)] = gid;
+    });
+  }
+  return cpToGid;
+}
+
+function applyFontGlyphs() {
+  const af = S.fonts.filter(f => f.enabled);
+  if (!af.length) { toast('請先載入字型'); return; }
+
+  // Collect Unicode codepoints: union of ALL enabled fonts
+  const unionCpSet = new Set();
+  af.forEach(font => {
+    const cpToGid = _extractFontCpSet(font);
+    Object.keys(cpToGid).forEach(cp => unionCpSet.add(parseInt(cp)));
+  });
+
+  const entries = [];
+
+  // Unicode glyphs first (sorted by cp)
+  Array.from(unionCpSet).sort((a,b) => a-b).forEach(cp => entries.push(cp));
+
+  // Non-Unicode glyphs — matched across fonts by GLYPH NAME (GIDs are font-specific,
+  // so the same index is a different glyph in each font). Build a union of the named
+  // non-Unicode glyphs from every enabled font, preserving first-seen order. Each
+  // entry stores an index into S.glyphNames; drawGlyph resolves the name → each
+  // font's own gid, so a given row shows the same glyph everywhere (or blank where a
+  // font lacks it).
+  const glyphNames = [];
+  const seenNames = new Set();
+  af.forEach(f => {
+    const otf = f.otFont;
+    const uniGids = new Set(Object.values(_extractFontCpSet(f)));
+    const n = otf.glyphs ? otf.glyphs.length : 0;
+    for (let gid = 0; gid < n; gid++) {
+      if (uniGids.has(gid)) continue;
+      let gname = '';
+      try { const g = otf.glyphs.get(gid); gname = (g && g.name) ? g.name : ''; } catch(e) {}
+      if (!gname) continue;                 // unnamed glyphs can't be matched across fonts
+      if (gname === 'nonmarkingreturn') continue;
+      if (seenNames.has(gname)) continue;
+      seenNames.add(gname);
+      glyphNames.push(gname);
+    }
+  });
+  S.glyphNames = glyphNames;
+  glyphNames.forEach((nm, idx) => entries.push(-(idx + 1)));
+
+  if (!entries.length) { toast('無法讀取字型字符'); return; }
+
+  S.charset = entries;
+  // Show union count and per-font count if multiple fonts
+  if (af.length > 1) {
+    const perFont = af.map(f => {
+      const n = Object.keys(_extractFontCpSet(f)).length;
+      return f.name.replace(/\.ttf|\.otf/i,'') + ':' + n;
+    }).join(' / ');
+    S.charsetName = '字型字符 union ' + unionCpSet.size + ' (' + perFont + ')';
+  } else {
+    S.charsetName = '字型字符 (' + entries.length + ')';
+  }
+  updateCsLabel(); renderGlyphs(); updateStatus();
+  toast('已載入 ' + entries.length + ' 個字符');
+}
+
+// Helper: get glyph name for a charset entry
+function getGlyphName(entry, font) {
+  if (entry >= 0) {
+    // Unicode codepoint
+    try {
+      const g = font.otFont.charToGlyph(String.fromCodePoint(entry));
+      if (g && g.name && g.name !== '.notdef') return g.name;
+    } catch(e) {}
+    return toUni(entry);
+  } else {
+    // Non-Unicode glyph: entry is an index into the shared cross-font name list
+    const idx = -(entry) - 1;
+    if (S.glyphNames && S.glyphNames[idx]) return S.glyphNames[idx];
+    return 'GID' + idx;
+  }
+}
+
+// ═══════════════════════════════════════
+// PASTE TEXT CHARSET
+// ═══════════════════════════════════════
+function openPasteModal() {
+  const el = document.getElementById('paste-input');
+  if (el) el.value = '';
+  document.getElementById('paste-count').textContent = '';
+  document.getElementById('paste-modal').classList.add('show');
+  setTimeout(() => el && el.focus(), 100);
+}
+
+function closePasteModal() {
+  document.getElementById('paste-modal').classList.remove('show');
+  // Reset sidebar if cancelled
+  const sel = document.getElementById('cs-type-sidebar');
+  if (sel && sel.value === 'paste-text') sel.value = '';
+}
+
+function applyPasteText() {
+  const text = document.getElementById('paste-input').value;
+  if (!text.trim()) { toast('請先貼上文字'); return; }
+  // Extract unique codepoints, preserve order of first appearance
+  const seen = new Set();
+  const cps = [];
+  for (const char of text) {
+    const cp = char.codePointAt(0);
+    if (cp > 0x0008 && !seen.has(cp)) { // skip control chars
+      seen.add(cp);
+      cps.push(cp);
+    }
+  }
+  if (!cps.length) { toast('未找到有效字符'); return; }
+  S.charset = cps;
+  S.charsetName = '貼上文字 (' + cps.length + ')';
+  closePasteModal();
+  document.getElementById('paste-modal').classList.remove('show');
+  // Keep sidebar showing paste-text
+  const sel = document.getElementById('cs-type-sidebar');
+  if (sel) sel.value = 'paste-text';
+  updateCsLabel(); renderGlyphs(); updateStatus();
+  toast('已載入 ' + cps.length + ' 個字符');
+}
+
+// Live count update
+document.addEventListener('input', e => {
+  if (e.target.id !== 'paste-input') return;
+  const text = e.target.value;
+  const seen = new Set([...text].map(c => c.codePointAt(0)).filter(cp => cp > 8));
+  document.getElementById('paste-count').textContent = seen.size ? `${seen.size} 個不重複字符` : '';
+});
+
+// ═══════════════════════════════════════
+// VARIABLE FONT INSTANCE PICKER
+// ═══════════════════════════════════════
+let pendingVFFile = null;
+
+function readFamilyNameFromBuf(buf) {
+  // Read nameID 16 (Preferred Family) or 1 (Family) from name table binary
+  try {
+    const dv = new DataView(buf);
+    const numTables = dv.getUint16(4);
+    let nameOff = 0;
+    for (let i = 0; i < numTables; i++) {
+      const tag = String.fromCharCode(dv.getUint8(12+i*16),dv.getUint8(13+i*16),dv.getUint8(14+i*16),dv.getUint8(15+i*16));
+      if (tag === 'name') { nameOff = dv.getUint32(20+i*16); break; }
+    }
+    if (!nameOff) return '';
+    const count = dv.getUint16(nameOff + 2);
+    const strOff = dv.getUint16(nameOff + 4);
+    let family1 = '', family16 = '';
+    for (let r = 0; r < count; r++) {
+      const rBase = nameOff + 6 + r * 12;
+      const platID = dv.getUint16(rBase);
+      const nameID = dv.getUint16(rBase + 6);
+      const len    = dv.getUint16(rBase + 8);
+      const start  = nameOff + strOff + dv.getUint16(rBase + 10);
+      if (platID !== 3) continue; // Windows platform
+      if (nameID !== 1 && nameID !== 16) continue;
+      let s = '';
+      for (let c = 0; c < len; c += 2) s += String.fromCharCode(dv.getUint16(start + c));
+      if (nameID === 16) family16 = s;
+      if (nameID === 1)  family1  = s;
+    }
+    return family16 || family1;
+  } catch(e) { return ''; }
+}
+
+function openVFModal(fileName, otf, buf) {
+  const fvar = otf.tables['fvar'];
+  const nameTable = otf.names;
+
+  function getInstName2(inst) {
+    try {
+      if (inst.name) return inst.name['en'] || inst.name['zh-TW'] || inst.name['zh'] || Object.values(inst.name)[0] || '';
+    } catch(e) {}
+    return '';
+  }
+
+  // Show axes info
+  const axesEl = document.getElementById('vf-axes');
+  axesEl.textContent = 'Axes: ' + fvar.axes.map(a => { const n = a.name ? (a.name['en'] || a.tag) : a.tag; return `${n} / ${a.tag} (${a.minValue}–${a.maxValue})`; }).join('  ·  ');
+
+  document.getElementById('vf-title').textContent = fileName;
+
+  // Build instance list
+  const list = document.getElementById('vf-list');
+  list.innerHTML = '';
+  fvar.instances.forEach((inst, i) => {
+    const iname = getInstName2(inst) || getInstName(inst) || ('Instance ' + (i+1));
+    const coords = inst.coordinates || {};
+    const coordStr = Object.entries(coords).map(([k,v]) => `${k}=${v}`).join(', ');
+    const row = document.createElement('label');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px';
+    row.innerHTML = `<input type="checkbox" checked data-idx="${i}" style="flex-shrink:0">
+      <span style="font-weight:500;flex:1">${iname}</span>
+      <span style="color:var(--text-3);font-family:var(--mono);font-size:10px">${coordStr}</span>`;
+    list.appendChild(row);
+  });
+
+  document.getElementById('vf-modal').classList.add('show');
+}
+
+function vfSelectAll(v) {
+  document.querySelectorAll('#vf-list input[type=checkbox]').forEach(cb => cb.checked = v);
+}
+
+function closeVFModal() {
+  document.getElementById('vf-modal').classList.remove('show');
+  pendingVFFile = null;
+}
+
+async function applyVFInstances() {
+  if (!pendingVFFile) return;
+  const { name, buf, otf } = pendingVFFile;
+  const fvar = otf.tables['fvar'];
+  const nameTable = otf.names;
+
+  function getInstName(inst) {
+    try {
+      if (inst.name) {
+        return inst.name['en'] || inst.name['zh-TW'] || inst.name['zh'] || Object.values(inst.name)[0] || '';
+      }
+      const id = inst.subfamilyNameID;
+      if (!id) return '';
+      const recs = nameTable[id];
+      if (!recs) return '';
+      if (Array.isArray(recs)) {
+        const en = recs.find(r => r.languageID === 0x0409);
+        return (en && en.value) || recs[0].value || '';
+      }
+      return recs['en'] || Object.values(recs)[0] || '';
+    } catch(e) { return ''; }
+  }
+
+  const checked = [...document.querySelectorAll('#vf-list input[type=checkbox]:checked')];
+  // Debug: log actual fvar and names structure
+
+  if (!checked.length) { toast('請至少選擇一個 Instance'); return; }
+
+  closeVFModal();
+
+  // Register one @font-face blob URL (shared across all instances)
+  const blob = new Blob([buf], {type:'font/ttf'});
+  const fontUrl = URL.createObjectURL(blob);
+
+  // Add one font entry per selected instance
+  for (const cb of checked) {
+    const idx = parseInt(cb.dataset.idx);
+    const inst = fvar.instances[idx];
+    const iname = getInstName(inst) || ('Instance ' + (idx+1));
+    const coords = inst.coordinates || {};
+    const variationSettings = Object.entries(coords).map(([k,v]) => `"${k}" ${v}`).join(', ');
+
+    const id    = Date.now() + Math.random();
+    const color = PRESET_COLORS[S.fonts.length % PRESET_COLORS.length];
+    // Family name: opentype.js exposes otf.names as {nameID: {en:'...'}}
+    // Get family name from opentype.js name table (nameID 1 or 16)
+    const familyName = readFamilyNameFromBuf(buf);
+    const cleanFamily = familyName.replace(/[\s\-]*(Thin|ExtraLight|Extra Light|Light|Regular|Medium|SemiBold|Semi Bold|Bold|ExtraBold|Extra Bold|Black|Italic).*$/i, '').trim();
+    const displayName = (cleanFamily ? cleanFamily + ' ' : '') + iname;
+
+    // Register a unique @font-face per instance with variation settings baked in
+    const instanceFid = '"fp_vfi_' + id.toString().replace('.','_') + '"';
+    const style = document.createElement('style');
+    style.textContent = `@font-face { font-family: ${instanceFid}; src: url("${fontUrl}"); font-variation-settings: ${variationSettings}; }`;
+    document.head.appendChild(style);
+
+    const otFont = opentype.parse(buf);
+    otFont._instanceFid = instanceFid;
+    otFont._variationSettings = variationSettings;
+    otFont._instanceName = iname;
+
+    S.fonts.push({ id, name: displayName, otFont, rawBuf: buf, color, enabled: true, colorType: null, cbdtMap: null, sbixMap: null, svgMap: null, colrData: null });
+  }
+
+  renderFontList(); renderColorList(); renderGlyphs(); updateStatus();
+  toast(`已載入 ${checked.length} 個 Instance`);
+}
+
 // INIT
-// initCharset() removed — user selects charset manually
-S.charsetName = ''; updateCsLabel();
+// Default charset: font-glyphs (applied when first font loads)
 initMetricsUI(); renderColorList(); updateStatus();
-// 側邊下拉預設顯示「選擇字元集」，不自動套用任何字元集
+// 側邊下拉初始化為 ASCII
+const _csSide = document.getElementById('cs-type-sidebar');
+if (_csSide) _csSide.value = 'ascii';
 </script>
 </body>
 </html>
